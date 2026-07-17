@@ -67,15 +67,15 @@ $summaryCards = [
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-6 fade-up delay-3">
 @php
 $items = [
-    ['Mango',      'MNG-001','285 kg','Jun 26','Davao Fresh Farms','₱120/kg','Available','badge-green', 92,'Fresh'],
-    ['Durian',     'DUR-112','145 kg','Jun 25','Mt. Apo Growers',  '₱320/kg','Available','badge-green', 78,'Good'],
-    ['Pomelo',     'POM-034','8 kg',  'Jul 2', 'Sta. Cruz Orchards','₱70/kg','Critical', 'badge-red',   16,'Critical'],
-    ['Mangosteen', 'MGS-078','92 kg', 'Jun 28','Davao Fresh Farms','₱170/kg','Available','badge-green', 85,'Fresh'],
-    ['Lanzones',   'LNZ-055','22 kg', 'Jun 27','Mt. Apo Growers',  '₱85/kg', 'Low Stock','badge-amber', 44,'Fair'],
-    ['Pineapple',  'PNA-019','118 kg','Jun 30','Sta. Cruz Orchards','₱75/kg','Available','badge-green', 88,'Fresh'],
-    ['Banana',     'BNA-041','210 kg','Jun 29','Davao Fresh Farms','₱42/kg', 'Available','badge-green', 95,'Excellent'],
-    ['Mango',      'MNG-002','155 kg','Jun 24','Mt. Apo Growers',  '₱118/kg','Low Stock','badge-amber', 35,'Fair'],
-    ['Durian',     'DUR-113','0 kg',  '—',     'Mt. Apo Growers',  '₱320/kg','Out of Stock','badge-gray', 0,'Depleted'],
+    ['Mango',      'MNG-001','285 kg','Jun 26','Davao Fresh Farms','₱120/kg','Available','badge-green', 92,'Fresh', 12],
+    ['Durian',     'DUR-112','145 kg','Jun 25','Mt. Apo Growers',  '₱320/kg','Available','badge-green', 78,'Good', 11],
+    ['Pomelo',     'POM-034','8 kg',  'Jul 2', 'Sta. Cruz Orchards','₱70/kg','Critical', 'badge-red',   16,'Critical', 18],
+    ['Mangosteen', 'MGS-078','92 kg', 'Jun 28','Davao Fresh Farms','₱170/kg','Available','badge-green', 85,'Fresh', 14],
+    ['Lanzones',   'LNZ-055','22 kg', 'Jun 27','Mt. Apo Growers',  '₱85/kg', 'Low Stock','badge-amber', 44,'Fair', 13],
+    ['Pineapple',  'PNA-019','118 kg','Jun 30','Sta. Cruz Orchards','₱75/kg','Available','badge-green', 88,'Fresh', 16],
+    ['Banana',     'BNA-041','210 kg','Jun 29','Davao Fresh Farms','₱42/kg', 'Available','badge-green', 95,'Excellent', 15],
+    ['Mango',      'MNG-002','155 kg','Jun 24','Mt. Apo Growers',  '₱118/kg','Low Stock','badge-amber', 35,'Fair', 10],
+    ['Durian',     'DUR-113','0 kg',  '—',     'Mt. Apo Growers',  '₱320/kg','Out of Stock','badge-gray', 0,'Depleted', 0],
 ];
 $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4';
 @endphp
@@ -125,6 +125,14 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
                 Exp: {{ $it[3] }}
             </span>
         </div>
+        <div class="flex items-center justify-between text-[11.5px] text-gray-400">
+            <span class="flex items-center gap-1">
+                <svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Shelf Life: <span class="{{ $it[10] <= 7 ? 'text-red-500' : ($it[10] <= 14 ? 'text-amber-500' : 'text-green-600') }} font-semibold">{{ $it[10] }} days</span>
+            </span>
+        </div>
         <div class="flex items-center justify-between">
             <span class="text-[12px] font-medium text-gray-500">
                 Freshness: <span class="{{ $it[8] > 70 ? 'text-green-600' : ($it[8] > 40 ? 'text-amber-500' : 'text-red-500') }} font-semibold">{{ $it[9] }}</span>
@@ -164,7 +172,7 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
             </div>
         </div>
         <div class="p-6 grid grid-cols-2 gap-4">
-            @foreach([['Current Stock','285 kg'],['Unit Price','₱120/kg'],['Supplier','Davao Fresh Farms'],['Expiration','Jun 26, 2026'],['Received Date','Jun 16, 2026'],['Storage','Room A · Shelf 3'],['Freshness Score','92/100'],['Spoilage Risk','8%']] as [$l,$v])
+            @foreach([['Current Stock','285 kg'],['Unit Price','₱120/kg'],['Supplier','Davao Fresh Farms'],['Expiration','Jun 26, 2026'],['Received Date','Jun 16, 2026'],['Shelf Life','12 days'],['Storage','Room A · Shelf 3'],['Freshness Score','92/100']] as [$l,$v])
             <div class="bg-gray-50 rounded-xl p-3.5 border border-gray-100">
                 <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wide">{{ $l }}</p>
                 <p class="text-[14px] font-bold text-gray-900 mt-1">{{ $v }}</p>
@@ -195,7 +203,10 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
                 <div><label class="inp-label">Unit Price (₱)</label><input type="number" :value="editModal?'120':''" placeholder="0" class="inp"></div>
                 <div><label class="inp-label">Expiration Date</label><input type="date" :value="editModal?'2026-06-26':''" class="inp"></div>
             </div>
-            <div><label class="inp-label">Supplier</label><select class="inp"><option>Davao Fresh Farms</option><option>Mt. Apo Growers</option><option>Sta. Cruz Orchards</option></select></div>
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="inp-label">Remaining Shelf Life (days)</label><input type="number" :value="editModal?'12':''" placeholder="0" class="inp"></div>
+                <div><label class="inp-label">Supplier</label><select class="inp"><option>Davao Fresh Farms</option><option>Mt. Apo Growers</option><option>Sta. Cruz Orchards</option></select></div>
+            </div>
         </div>
         <div class="flex gap-3 px-6 pb-6">
             <button @click="addModal=false;editModal=false" class="btn btn-outline btn-md flex-1">Cancel</button>

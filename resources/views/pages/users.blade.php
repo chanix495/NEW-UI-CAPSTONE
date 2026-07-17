@@ -38,7 +38,7 @@
 {{-- User Cards --}}
 @php
 $users=[
-    ['JD','Juan Dela Cruz',  'juan@freshtrack.ph',    'Owner',   'Active',  '2 hours ago', 'owner',   ['Full system access','Financial reports','User management','All AI features'],  'badge-violet'],
+    ['JD','Criss Banawa',  'juan@freshtrack.ph',    'Owner',   'Active',  '2 hours ago', 'owner',   ['Full system access','Financial reports','User management','All AI features'],  'badge-violet'],
     ['MR','Maria Santos Reyes','maria@freshtrack.ph', 'Manager', 'Active',  '30 min ago',  'manager', ['Inventory management','Sales reports','Forecast view','Limited settings'],     'badge-blue'],
     ['PR','Pedro Garcia Reyes','pedro@freshtrack.ph', 'Cashier', 'Active',  '5 min ago',   'cashier', ['Record sales','View inventory','Basic dashboard','No admin access'],           'badge-amber'],
     ['AG','Ana Lopez Gomez', 'ana@freshtrack.ph',     'Cashier', 'Active',  '1 hour ago',  'cashier', ['Record sales','View inventory','Basic dashboard','No admin access'],           'badge-amber'],
@@ -115,8 +115,8 @@ $users=[
         </div>
         <div class="p-6 space-y-4">
             <div class="grid grid-cols-2 gap-3">
-                <div><label class="inp-label">First Name</label><input type="text" :value="editModal?'Juan':''" placeholder="First name" class="inp"></div>
-                <div><label class="inp-label">Last Name</label><input type="text" :value="editModal?'Dela Cruz':''" placeholder="Last name" class="inp"></div>
+                <div><label class="inp-label">First Name</label><input type="text" :value="editModal?'Criss':''" placeholder="First name" class="inp"></div>
+                <div><label class="inp-label">Last Name</label><input type="text" :value="editModal?'Banawa':''" placeholder="Last name" class="inp"></div>
             </div>
             <div><label class="inp-label">Email Address</label><input type="email" :value="editModal?'juan@FreshTrack.ph':''" placeholder="user@FreshTrack.ph" class="inp"></div>
             <div><label class="inp-label">Phone Number</label><input type="tel" :value="editModal?'+63 912 345 6789':''" placeholder="+63 9XX XXX XXXX" class="inp"></div>

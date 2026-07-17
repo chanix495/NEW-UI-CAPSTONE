@@ -132,7 +132,7 @@
                     class="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-2xl hover:bg-[#F5F3FF] transition-all active:scale-95 group">
                 <div class="w-8 h-8 g-violet rounded-full flex items-center justify-center text-white text-xs font-black shadow-md shadow-violet-200">JD</div>
                 <div class="hidden lg:block text-left">
-                    <p class="text-[12.5px] font-semibold text-gray-900 leading-tight">Juan Dela Cruz</p>
+                    <p class="text-[12.5px] font-semibold text-gray-900 leading-tight">Criss Banawa</p>
                     <p class="text-[11px] text-violet-500 leading-tight">Owner</p>
                 </div>
                 <svg :class="profile ? 'rotate-180' : ''"
@@ -156,7 +156,7 @@
                     <div class="flex items-center gap-3">
                         <div class="w-12 h-12 g-violet rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-lg shadow-violet-200">JD</div>
                         <div>
-                            <p class="font-bold text-gray-900 text-sm" style="font-family:Poppins,sans-serif">Juan Dela Cruz</p>
+                            <p class="font-bold text-gray-900 text-sm" style="font-family:Poppins,sans-serif">Criss Banawa</p>
                             <p class="text-[11.5px] text-gray-500">juan@FreshTrack.ph</p>
                             <div class="flex items-center gap-1.5 mt-1">
                                 <svg class="w-3 h-3 text-violet-600" fill="currentColor" viewBox="0 0 20 20">

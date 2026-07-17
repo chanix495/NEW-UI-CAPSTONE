@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         <div class="hidden md:flex items-center gap-2 flex-shrink-0">
             <div class="w-8 h-8 g-violet rounded-full flex items-center justify-center text-white text-xs font-black shadow-md shadow-violet-200">JD</div>
             <div class="hidden xl:block">
-                <p class="text-[12px] font-semibold text-gray-900 leading-tight">Juan Dela Cruz</p>
+                <p class="text-[12px] font-semibold text-gray-900 leading-tight">Criss Banawa</p>
                 <p class="text-[10.5px] text-violet-500">Cashier</p>
             </div>
         </div>

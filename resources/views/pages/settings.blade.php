@@ -40,13 +40,13 @@
                         </button>
                     </div>
                     <div>
-                        <h4 class="font-black text-gray-900 text-[18px]">Juan Dela Cruz</h4>
+                        <h4 class="font-black text-gray-900 text-[18px]">Criss Banawa</h4>
                         <p class="text-gray-500 text-[13px] mt-0.5">Owner · FreshTrack Davao City</p>
                         <span class="badge badge-violet text-[11px] mt-2">Administrator</span>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    @foreach([['First Name','text','Juan',''],['Last Name','text','Dela Cruz',''],['Email Address','email','juan@FreshTrack.ph','md:col-span-2'],['Phone Number','tel','+63 912 345 6789',''],['Business Name','text','FreshTrack Davao',''],['Location','text','Davao City, Philippines',''],['Role','text','Owner · Administrator',''],['Account Created','text','January 15, 2026','md:col-span-2']] as [$l,$t,$v,$c])
+                    @foreach([['First Name','text','Criss',''],['Last Name','text','Banawa',''],['Email Address','email','juan@FreshTrack.ph','md:col-span-2'],['Phone Number','tel','+63 912 345 6789',''],['Business Name','text','FreshTrack Davao',''],['Location','text','Davao City, Philippines',''],['Role','text','Owner · Administrator',''],['Account Created','text','January 15, 2026','md:col-span-2']] as [$l,$t,$v,$c])
                     <div class="{{ $c }}"><label class="inp-label">{{ $l }}</label><input type="{{ $t }}" value="{{ $v }}" class="inp {{ in_array($l,['Role','Account Created']) ? 'bg-gray-100 cursor-not-allowed' : '' }}" {{ in_array($l,['Role','Account Created']) ? 'readonly' : '' }}></div>
                     @endforeach
                 </div>

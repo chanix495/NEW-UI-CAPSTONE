@@ -62,7 +62,7 @@
             <p class="text-white/70 text-[15px] leading-relaxed mb-8 max-w-sm">AI-powered sales forecasting, real-time spoilage prediction, and intelligent inventory management — built for Davao City fruit vendors.</p>
 
             <div class="grid grid-cols-3 gap-4">
-                @foreach([['96%'Forecast Accuracy'],['↓62%'Less Spoilage'],['₱342K'Revenue/Month']] as [$v,$l])
+                @foreach([['96%', 'Forecast Accuracy'], ['↓62%', 'Less Spoilage'], ['₱342K', 'Revenue/Month']] as [$v, $l])
                 <div class="bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-4 text-center">
                     <p class="text-green-300 font-black text-xl">{{ $v }}</p>
                     <p class="text-white/60 text-[10.5px] font-medium mt-0.5">{{ $l }}</p>
@@ -99,10 +99,10 @@
 
             {{-- Role selector --}}
             <div class="grid grid-cols-3 gap-3 mb-7 p-1 bg-gray-100 rounded-2xl">
-                @foreach([['Owner'],['Manager'],['Cashier']] as $i => [$e,$r])
+                @foreach([['Owner'], ['Manager'], ['Cashier']] as $i => $role)
                 <button x-data :class="{{ $i }}===0 ? 'bg-white shadow-md text-violet-700 font-bold' : 'text-gray-500 hover:text-gray-700'"
                         class="flex flex-col items-center gap-1 py-3 rounded-xl text-[12px] font-semibold transition-all">
-                    {{ $r }}
+                    {{ $role[0] }}
                 </button>
                 @endforeach
             </div>
@@ -159,7 +159,7 @@
                     <span class="ml-auto text-[10px] bg-violet-100 text-violet-700 font-bold px-2 py-0.5 rounded-full">Prototype</span>
                 </div>
                 <div class="grid grid-cols-3 gap-2 text-[11.5px]">
-                    @foreach([['👑 Owner'owner@FreshTrack.ph'Full access'],['📋 Manager'manager@FreshTrack.ph'Limited'],['💰 Cashier'cashier@FreshTrack.ph'Sales only']] as [$r,$e,$a])
+                    @foreach([['👑 Owner', 'owner@FreshTrack.ph', 'Full access'], ['📋 Manager', 'manager@FreshTrack.ph', 'Limited'], ['💰 Cashier', 'cashier@FreshTrack.ph', 'Sales only']] as [$r, $e, $a])
                     <div class="bg-white rounded-xl p-2.5 border border-violet-100 text-center">
                         <p class="font-bold text-gray-700 text-[11px]">{{ $r }}</p>
                         <p class="text-violet-600 font-mono text-[9.5px] mt-1">{{ $e }}</p>
