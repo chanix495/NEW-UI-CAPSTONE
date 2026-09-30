@@ -3,7 +3,7 @@
 
 {{-- HERO BANNER --}}
 <div class="relative rounded-3xl p-7 mb-7 overflow-hidden shadow-xl fade-up"
-     style="background:linear-gradient(135deg,#7C3AED 0%,#6D28D9 45%,#059669 100%)">
+     style="background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 50%, #5B21B6 100%)">
     {{-- Dot grid texture --}}
     <div class="absolute inset-0 opacity-10"
          style="background-image:radial-gradient(circle,rgba(255,255,255,.8) 1px,transparent 1px);background-size:32px 32px"></div>
@@ -18,53 +18,55 @@
             <path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 008 20C19 20 22 3 22 3c-1 2-8 2-8 2 .29-1.18.85-2.26 1.64-3.16A9.5 9.5 0 0017 8z"/>
         </svg>
     </div>
-    <div class="relative flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-        <div>
-            <div class="flex items-center gap-3 mb-2">
-                <div class="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 backdrop-blur-sm">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/>
-                    </svg>
-                </div>
-                <h1 class="text-2xl font-black text-white">Good {{ now()->hour < 12 ? 'morning' : (now()->hour < 18 ? 'afternoon' : 'evening') }}, Criss Banawa!</h1>
+    <div class="relative">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 backdrop-blur-sm">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/>
+                </svg>
             </div>
-            <p class="text-white/75 text-[14.5px] mb-4">
-                {{ now()->format('l, F j, Y') }} · Here's your executive summary for today.
-            </p>
-            <div class="flex flex-wrap gap-3">
-                <span class="flex items-center gap-1.5 text-[12px] bg-white/15 text-white font-semibold px-3.5 py-1.5 rounded-full backdrop-blur-sm border border-white/20">
-                    <span class="w-1.5 h-1.5 bg-green-300 rounded-full" style="animation:pd 2.2s infinite"></span>
-                    Live Data
-                </span>
-                <span class="flex items-center gap-1.5 text-[12px] bg-white/15 text-white font-semibold px-3.5 py-1.5 rounded-full border border-white/20">
-                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
-                    FreshTrack Davao · Peak Season
-                </span>
-                <span class="flex items-center gap-1.5 text-[12px] bg-green-400/20 text-green-200 font-semibold px-3.5 py-1.5 rounded-full border border-green-400/25">
-                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
-                    </svg>
-                    28°C · Partly Cloudy
-                </span>
+            <div class="flex-1">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-2xl font-black text-white">Good {{ now()->hour < 12 ? 'morning' : (now()->hour < 18 ? 'afternoon' : 'evening') }}, Criss Banawa!</h1>
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        <a href="{{ route('reports') }}"
+                           class="flex items-center gap-2 bg-white/15 border border-white/25 text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl hover:bg-white/25 transition-all">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                            Export Report
+                        </a>
+                        <a href="{{ route('forecast') }}"
+                           class="flex items-center gap-2 bg-white text-violet-700 text-[13px] font-bold px-4 py-2.5 rounded-xl hover:bg-violet-50 transition-all shadow-lg">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                            View Sales Forecasting
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="flex items-center gap-3 flex-shrink-0">
-            <a href="{{ route('reports') }}"
-               class="flex items-center gap-2 bg-white/15 border border-white/25 text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl hover:bg-white/25 transition-all">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        <p class="text-white/75 text-[14.5px] mb-4">
+            {{ now()->format('l, F j, Y') }} · Here's your executive summary for today.
+        </p>
+        <div class="flex flex-wrap gap-3">
+            <span class="flex items-center gap-1.5 text-[12px] bg-white/15 text-white font-semibold px-3.5 py-1.5 rounded-full backdrop-blur-sm border border-white/20">
+                <span class="w-1.5 h-1.5 bg-violet-200 rounded-full" style="animation:pd 2.2s infinite"></span>
+                Live Data
+            </span>
+            <span class="flex items-center gap-1.5 text-[12px] bg-white/15 text-white font-semibold px-3.5 py-1.5 rounded-full border border-white/20">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
-                Export Report
-            </a>
-            <a href="{{ route('forecast') }}"
-               class="flex items-center gap-2 bg-white text-violet-700 text-[13px] font-bold px-4 py-2.5 rounded-xl hover:bg-violet-50 transition-all shadow-lg">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                FreshTrack Davao · Peak Season
+            </span>
+            <span class="flex items-center gap-1.5 text-[12px] bg-white/15 text-white font-semibold px-3.5 py-1.5 rounded-full border border-white/20">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
                 </svg>
-                View AI Forecast
-            </a>
+                28°C · Partly Cloudy
+            </span>
         </div>
     </div>
 </div>
@@ -74,9 +76,9 @@
 @php
 $kpis1 = [
     ["Today's Sales",   '₱18,450',  '+12.5%', true,  'g-violet', 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'vs yesterday',     '#7C3AED', 'salesSparkline',    [12400,14200,11800,15600,13400,16200,18450]],
-    ['Monthly Revenue', '₱342,800', '+8.3%',  true,  'g-green',  'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',                                                                                                                                                  'vs last month',    '#10B981', 'revenueSparkline',  [295000,310000,318000,325000,330000,338000,342800]],
-    ['Total Inventory', '1,240 kg', '-3.2%',  false, 'g-amber',  'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',                                                                                                               'vs last week',     '#F59E0B', 'inventorySparkline',[1380,1350,1320,1295,1270,1255,1240]],
-    ['Forecast Acc.',   '96.4%',    '+1.2%',  true,  'g-blue',   'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 'model confidence', '#3B82F6', 'forecastSparkline', [93.2,94.1,93.8,94.5,95.1,95.8,96.4]],
+    ['Monthly Revenue', '₱342,800', '+8.3%',  true,  'g-violet',  'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',                                                                                                                                                  'vs last month',    '#8B5CF6', 'revenueSparkline',  [295000,310000,318000,325000,330000,338000,342800]],
+    ['Total Inventory', '1,240 kg', '-3.2%',  false, 'g-violet',  'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',                                                                                                               'vs last week',     '#A78BFA', 'inventorySparkline',[1380,1350,1320,1295,1270,1255,1240]],
+    ['Forecast Acc.',   '96.4%',    '+1.2%',  true,  'g-violet',   'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 'model confidence', '#6D28D9', 'forecastSparkline', [93.2,94.1,93.8,94.5,95.1,95.8,96.4]],
 ];
 @endphp
 @foreach($kpis1 as [$label,$val,$chg,$up,$grad,$iconPath,$sub,$color,$canvasId,$sparkData])
@@ -87,7 +89,7 @@ $kpis1 = [
                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $iconPath }}"/>
             </svg>
         </div>
-        <span class="badge {{ $up ? 'badge-green' : 'badge-red' }} text-[11px] flex items-center gap-1">
+        <span class="badge {{ $up ? 'bg-violet-100 text-violet-700' : 'bg-purple-100 text-purple-700' }} text-[11px] flex items-center gap-1">
             <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $up ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7' }}"/>
             </svg>
@@ -111,10 +113,10 @@ $kpis1 = [
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
 @php
 $kpis2 = [
-    ['Spoilage Rate',   '8.4%',    '-2.1%',  true,  'g-rose',   'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',                   'below avg threshold', '#EF4444', 'spoilageSparkline',  [12.1,11.3,10.8,10.2,9.5,8.9,8.4]],
-    ['Low Stock Items', '3 Items',  '+1',     false, 'g-amber',  'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6',                                                                                                                            'needs attention',     '#F59E0B', 'lowstockSparkline', [1,1,2,1,3,2,3]],
-    ['Expected Profit', '₱52,300', '+15.7%', true,  'g-teal',   'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'projected this month','#14B8A6','profitSparkline',   [38000,41000,43500,46200,48700,50500,52300]],
-    ['AI Score',        '94/100',  '+3pts',  true,  'g-indigo', 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z', 'recommendations', '#6366F1','aiSparkline',       [88,89,90,91,91,93,94]],
+    ['Spoilage Rate',   '8.4%',    '-2.1%',  true,  'g-violet',   'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',                   'below avg threshold', '#9333EA', 'spoilageSparkline',  [12.1,11.3,10.8,10.2,9.5,8.9,8.4]],
+    ['Low Stock Items', '3 Items',  '+1',     false, 'g-violet',  'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6',                                                                                                                            'needs attention',     '#A855F7', 'lowstockSparkline', [1,1,2,1,3,2,3]],
+    ['Expected Profit', '₱52,300', '+15.7%', true,  'g-violet',   'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'projected this month','#7C3AED','profitSparkline',   [38000,41000,43500,46200,48700,50500,52300]],
+    ['AI Score',        '94/100',  '+3pts',  true,  'g-violet', 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z', 'recommendations', '#6D28D9','aiSparkline',       [88,89,90,91,91,93,94]],
 ];
 @endphp
 @foreach($kpis2 as [$label,$val,$chg,$up,$grad,$iconPath,$sub,$color,$canvasId,$sparkData])
@@ -125,7 +127,7 @@ $kpis2 = [
                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $iconPath }}"/>
             </svg>
         </div>
-        <span class="badge {{ $up ? 'badge-green' : 'badge-red' }} text-[11px] flex items-center gap-1">
+        <span class="badge {{ $up ? 'bg-violet-100 text-violet-700' : 'bg-purple-100 text-purple-700' }} text-[11px] flex items-center gap-1">
             <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                 <path stroke-linecap="round" stroke-linejoin="round" d="{{ $up ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7' }}"/>
             </svg>
@@ -148,7 +150,7 @@ $kpis2 = [
 <div class="card p-6 mb-7 fade-up">
     <div class="flex items-center justify-between mb-5">
         <div class="flex items-center gap-3">
-            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <div class="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
                 <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                 </svg>
@@ -158,7 +160,7 @@ $kpis2 = [
                 <p class="text-[12px] text-gray-400 mt-0.5">7-day sales prediction · Model accuracy: 96.4%</p>
             </div>
         </div>
-        <a href="{{ route('forecast') }}" class="flex items-center gap-2 text-[13px] font-semibold text-blue-600 hover:text-blue-700">
+        <a href="{{ route('forecast') }}" class="flex items-center gap-2 text-[13px] font-semibold text-violet-600 hover:text-violet-700">
             Full Forecast
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
@@ -173,15 +175,15 @@ $kpis2 = [
             </div>
         </div>
         <div class="space-y-3">
-            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 border border-blue-100">
+            <div class="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-4 border border-violet-100">
                 <div class="flex items-center justify-between mb-2">
-                    <span class="text-[11px] font-bold text-blue-600 uppercase tracking-wide">Highest Demand</span>
-                    <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <span class="text-[11px] font-bold text-violet-600 uppercase tracking-wide">Highest Demand</span>
+                    <svg class="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>
                     </svg>
                 </div>
                 <p class="text-[20px] font-black text-gray-900">Mango</p>
-                <p class="text-[13px] text-gray-600 mt-1">Forecasted: <span class="font-bold text-blue-700">145 kg/day</span></p>
+                <p class="text-[13px] text-gray-600 mt-1">Forecasted: <span class="font-bold text-violet-700">145 kg/day</span></p>
                 <p class="text-[11px] text-gray-400 mt-1">↑ 38% increase expected this weekend</p>
             </div>
             
@@ -223,7 +225,7 @@ $kpis2 = [
 <div class="card p-6 mb-7 fade-up">
     <div class="flex items-center justify-between mb-5">
         <div class="flex items-center gap-3">
-            <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg">
                 <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                 </svg>
@@ -233,7 +235,7 @@ $kpis2 = [
                 <p class="text-[12px] text-gray-400 mt-0.5">Real-time spoilage risk analysis · Sensor-powered predictions</p>
             </div>
         </div>
-        <a href="{{ route('spoilage') }}" class="flex items-center gap-2 text-[13px] font-semibold text-orange-600 hover:text-orange-700">
+        <a href="{{ route('spoilage') }}" class="flex items-center gap-2 text-[13px] font-semibold text-purple-600 hover:text-purple-700">
             View Details
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
@@ -278,10 +280,10 @@ $kpis2 = [
                     <td class="py-4 px-3">
                         <div class="flex items-center gap-3">
                             <div class="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div class="h-full {{ $risk >= 70 ? 'bg-red-500' : ($risk >= 50 ? 'bg-orange-500' : ($risk >= 30 ? 'bg-amber-400' : 'bg-green-500')) }}" 
+                                <div class="h-full {{ $risk >= 70 ? 'bg-purple-600' : ($risk >= 50 ? 'bg-purple-500' : ($risk >= 30 ? 'bg-violet-400' : 'bg-violet-300')) }}" 
                                      style="width: {{ $risk }}%"></div>
                             </div>
-                            <span class="text-[13px] font-bold {{ $risk >= 70 ? 'text-red-600' : ($risk >= 50 ? 'text-orange-600' : ($risk >= 30 ? 'text-amber-600' : 'text-green-600')) }} min-w-[40px]">
+                            <span class="text-[13px] font-bold {{ $risk >= 70 ? 'text-purple-600' : ($risk >= 50 ? 'text-purple-500' : ($risk >= 30 ? 'text-violet-500' : 'text-violet-400')) }} min-w-[40px]">
                                 {{ $risk }}%
                             </span>
                         </div>
@@ -290,7 +292,7 @@ $kpis2 = [
                         <span class="text-[12.5px] text-gray-500">{{ $shelf }}</span>
                     </td>
                     <td class="py-4 px-3">
-                        <span class="badge {{ $badge }} text-[11px]">{{ $status }}</span>
+                        <span class="badge bg-purple-100 text-purple-700 text-[11px]">{{ $status }}</span>
                     </td>
                     <td class="py-4 px-3">
                         <span class="text-[12.5px] font-semibold text-violet-600">{{ $action }}</span>
@@ -306,7 +308,7 @@ $kpis2 = [
 <div class="card p-6 mb-7 fade-up">
     <div class="flex items-center justify-between mb-5">
         <div class="flex items-center gap-3">
-            <div class="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <div class="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
                 <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
                 </svg>
@@ -317,7 +319,7 @@ $kpis2 = [
             </div>
         </div>
         <span class="flex items-center gap-2 text-[13px] font-semibold text-gray-600">
-            <svg class="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg class="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
             </svg>
             Live Data
@@ -326,7 +328,7 @@ $kpis2 = [
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {{-- Current Weather --}}
-        <div class="bg-blue-600 rounded-2xl p-6 text-white shadow-lg">
+        <div class="bg-violet-600 rounded-2xl p-6 text-white shadow-lg">
             <p class="text-[11px] font-bold text-white/80 uppercase tracking-wide mb-3">📍 Davao City · Live</p>
             <div class="mb-4">
                 <p class="text-[52px] font-black leading-none mb-1">28°C</p>
@@ -353,17 +355,17 @@ $kpis2 = [
         </div>
 
         {{-- Impact Explanation --}}
-        <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-5 border-2 border-amber-200">
+        <div class="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-5 border-2 border-violet-200">
             <h3 class="text-[14px] font-black text-gray-900 mb-3 flex items-center gap-2">
-                <svg class="w-4.5 h-4.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg class="w-4.5 h-4.5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
                 Weather Effects on Spoilage
             </h3>
             <div class="space-y-3">
                 <div class="flex items-start gap-2.5">
-                    <div class="w-7 h-7 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg class="w-3.5 h-3.5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <div class="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg class="w-3.5 h-3.5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
                         </svg>
                     </div>
@@ -373,8 +375,8 @@ $kpis2 = [
                     </div>
                 </div>
                 <div class="flex items-start gap-2.5">
-                    <div class="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <div class="w-7 h-7 bg-violet-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg class="w-3.5 h-3.5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                         </svg>
                     </div>
@@ -399,40 +401,40 @@ $kpis2 = [
 
         {{-- Weather Recommendations --}}
         <div class="space-y-3">
-            <div class="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl p-4 border-2 border-red-200">
+            <div class="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-4 border-2 border-purple-200">
                 <div class="flex items-center gap-2 mb-2">
-                    <svg class="w-4.5 h-4.5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <svg class="w-4.5 h-4.5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
-                    <span class="badge bg-red-100 text-red-700 text-[9.5px] font-bold">URGENT</span>
+                    <span class="badge bg-purple-100 text-purple-700 text-[9.5px] font-bold">URGENT</span>
                 </div>
                 <h4 class="text-[13px] font-black text-gray-900 mb-1.5">High Humidity Warning</h4>
                 <p class="text-[11.5px] text-gray-600 leading-snug mb-2.5">78% humidity increases risk. Monitor DUR-112 & MNG-002 batches.</p>
-                <button class="btn btn-sm bg-red-600 text-white hover:bg-red-700 w-full text-[11px] font-bold py-1.5">
+                <button class="btn btn-sm bg-purple-600 text-white hover:bg-purple-700 w-full text-[11px] font-bold py-1.5">
                     View Batches
                 </button>
             </div>
 
-            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 border-2 border-blue-200">
+            <div class="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-4 border-2 border-violet-200">
                 <div class="flex items-center gap-2 mb-2">
-                    <svg class="w-4.5 h-4.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <svg class="w-4.5 h-4.5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                     </svg>
-                    <span class="badge bg-blue-100 text-blue-700 text-[9.5px] font-bold">ACTION</span>
+                    <span class="badge bg-violet-100 text-violet-700 text-[9.5px] font-bold">ACTION</span>
                 </div>
                 <h4 class="text-[13px] font-black text-gray-900 mb-1.5">Temperature Control</h4>
                 <p class="text-[11.5px] text-gray-600 leading-snug mb-2.5">Keep storage at 18-22°C with proper ventilation.</p>
-                <button class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700 w-full text-[11px] font-bold py-1.5">
+                <button class="btn btn-sm bg-violet-600 text-white hover:bg-violet-700 w-full text-[11px] font-bold py-1.5">
                     Guidelines
                 </button>
             </div>
 
-            <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-4 border-2 border-green-200">
+            <div class="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-4 border-2 border-violet-200">
                 <div class="flex items-center gap-2 mb-2">
-                    <svg class="w-4.5 h-4.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <svg class="w-4.5 h-4.5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                     </svg>
-                    <span class="badge bg-green-100 text-green-700 text-[9.5px] font-bold">48H</span>
+                    <span class="badge bg-violet-100 text-violet-700 text-[9.5px] font-bold">48H</span>
                 </div>
                 <h4 class="text-[13px] font-black text-gray-900 mb-1.5">Forecast Outlook</h4>
                 <p class="text-[11.5px] text-gray-600 leading-snug">Humidity 75-80%. Temp stable. Continue monitoring.</p>
@@ -470,7 +472,7 @@ $kpis2 = [
                 <canvas id="donutChart"></canvas>
             </div>
             <div class="flex-1 space-y-3">
-                @foreach([['Mango','38%','#7C3AED'],['Durian','22%','#10B981'],['Pineapple','15%','#3B82F6'],['Others','25%','#F59E0B']] as [$n,$p,$c])
+                @foreach([['Mango','38%','#7C3AED'],['Durian','22%','#8B5CF6'],['Pineapple','15%','#A78BFA'],['Others','25%','#C4B5FD']] as [$n,$p,$c])
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
                         <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:{{ $c }}"></span>
@@ -799,7 +801,7 @@ new Chart(document.getElementById('donutChart'), {
         labels: ['Mango','Durian','Pineapple','Others'],
         datasets: [{
             data: [38,22,15,25],
-            backgroundColor: ['#7C3AED','#10B981','#3B82F6','#F59E0B'],
+            backgroundColor: ['#7C3AED','#8B5CF6','#A78BFA','#C4B5FD'],
             borderWidth: 0
         }]
     },
@@ -841,7 +843,7 @@ new Chart(document.getElementById('fruitBarChart'), {
         datasets: [{
             label: 'Revenue',
             data: [120000,85000,52000,48000,35000,42000,28000],
-            backgroundColor: ['#7C3AED','#10B981','#3B82F6','#FACC15','#F59E0B','#EC4899','#8B5CF6'],
+            backgroundColor: ['#7C3AED','#8B5CF6','#A78BFA','#C4B5FD','#DDD6FE','#9333EA','#A855F7'],
             borderRadius: 10
         }]
     },

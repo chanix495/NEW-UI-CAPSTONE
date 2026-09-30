@@ -22,6 +22,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -45,5 +46,67 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Check if user is an owner.
+     */
+    public function isOwner(): bool
+    {
+        return $this->role === 'owner';
+    }
+
+    /**
+     * Check if user is a manager.
+     */
+    public function isManager(): bool
+    {
+        return $this->role === 'manager';
+    }
+
+    /**
+     * Check if user is a cashier.
+     */
+    public function isCashier(): bool
+    {
+        return $this->role === 'cashier';
+    }
+
+    /**
+     * Check if user has access to a specific feature.
+     */
+    public function canAccess(string $feature): bool
+    {
+        $permissions = [
+            'owner' => [
+                'dashboard',
+                'inventory',
+                'sales',
+                'pos',
+                'forecast',
+                'spoilage',
+                'analytics',
+                'reports',
+                'decision-support',
+                'notifications',
+                'settings',
+            ],
+            'manager' => [
+                'pos',
+                'sales',
+                'inventory',
+                'reports',
+                'forecast',
+                'spoilage',
+                'analytics',
+            ],
+            'cashier' => [
+                'pos',
+                'settings',
+                'notifications',
+            ],
+        ];
+
+        return in_array($feature, $permissions[$this->role] ?? []);
     }
 }

@@ -74,7 +74,7 @@
                 <div>
                     <h4 class="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-3">Alert Types</h4>
                     <div class="space-y-3">
-                        @foreach([['notifLow','Low Stock Alerts','Alert when fruit stock falls below minimum level','notifLow'],['notifSpoil','Spoilage Risk Alerts','Alert when spoilage risk exceeds threshold','notifSpoil'],['notifForecast','AI Forecast Updates','Alert when new AI forecast is ready','notifForecast']] as $n)
+                        @foreach([['notifLow','Low Stock Alerts','Alert when fruit stock falls below minimum level','notifLow'],['notifSpoil','Spoilage Risk Alerts','Alert when spoilage risk exceeds threshold','notifSpoil'],['notifForecast','Sales Forecast Updates','Alert when new sales forecast is ready','notifForecast']] as $n)
                         <div class="flex items-center justify-between p-4 bg-[#F9F8FF] rounded-2xl border border-violet-100">
                             <div><p class="text-[13.5px] font-semibold text-gray-800">{{ $n[1] }}</p><p class="text-[12px] text-gray-400 mt-0.5">{{ $n[2] }}</p></div>
                             <button @click="{{ $n[3] }} = !{{ $n[3] }}" :class="{{ $n[3] }} ? 'g-violet' : 'bg-gray-300'" class="relative w-12 h-6 rounded-full transition-all duration-200 flex-shrink-0 shadow-inner">

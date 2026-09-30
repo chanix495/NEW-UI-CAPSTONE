@@ -252,7 +252,7 @@
                 </div>
                 <p class="text-gray-400 text-[13px] leading-relaxed">Capstone project — Sales Forecasting & Inventory Management System for Fruit Vendors in Davao City.</p>
             </div>
-            @foreach([['Platform',['Dashboard','Inventory','AI Forecast','Spoilage','Decision Support']],['Analytics',['Sales Reports','Analytics','Notifications','Settings','About']]] as [$g,$links])
+            @foreach([['Platform',['Dashboard','Inventory','Sales Forecasting','Spoilage','Decision Support']],['Analytics',['Sales Reports','Analytics','Notifications','Settings','About']]] as [$g,$links])
             <div>
                 <h4 class="font-bold text-[13px] text-gray-300 uppercase tracking-wider mb-4">{{ $g }}</h4>
                 <ul class="space-y-2">

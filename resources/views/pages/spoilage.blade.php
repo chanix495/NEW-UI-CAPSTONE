@@ -138,8 +138,12 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
                         Humidity
                     </div>
                 </th>
-                <th class="text-left">CO₂ ppm</th>
-                <th class="text-left">Light</th>
+                <th class="text-left">
+                    <div class="flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+                        Weather
+                    </div>
+                </th>
                 <th class="text-left">Spoilage %</th>
                 <th class="text-left">Priority</th>
                 <th class="text-left">Status</th>
@@ -148,14 +152,14 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
             <tbody>
 @php
 $rows = [
-    ['Mango MNG-002',  'g-rose',   '31°C','82%','1,240','High',78,95,'Critical','Sell immediately'],
-    ['Durian DUR-112', 'g-orange', '28°C','75%','2,180','Low', 65,82,'High Risk','Sell today'],
-    ['Mango MNG-001',  'g-amber',  '26°C','70%','980',  'Med', 45,68,'High Risk','Apply 15% off'],
-    ['Lanzones LNZ-055','g-amber', '29°C','78%','1,100','Med', 38,55,'Moderate', 'Sell in 2 days'],
-    ['Mangosteen MGS-078','g-teal','25°C','65%','820',  'Low', 22,38,'Moderate', 'Check tomorrow'],
-    ['Pomelo POM-034', 'g-blue',   '24°C','60%','760',  'Low', 18,30,'Low Risk', 'Monitor humidity'],
-    ['Pineapple PNA-019','g-green','23°C','58%','680',  'Low', 12,20,'Low Risk', 'Normal sales'],
-    ['Banana BNA-041', 'g-emerald','22°C','55%','640',  'Low', 8, 12,'Fresh',    'Optimal condition'],
+    ['Mango MNG-002',  'g-rose',   '31°C','82%','Hot & Humid',78,95,'Critical','Sell immediately'],
+    ['Durian DUR-112', 'g-orange', '28°C','75%','Partly Cloudy',65,82,'High Risk','Sell today'],
+    ['Mango MNG-001',  'g-amber',  '26°C','70%','Sunny',45,68,'High Risk','Apply 15% off'],
+    ['Lanzones LNZ-055','g-amber', '29°C','78%','Hot & Humid',38,55,'Moderate', 'Sell in 2 days'],
+    ['Mangosteen MGS-078','g-teal','25°C','65%','Clear',22,38,'Moderate', 'Check tomorrow'],
+    ['Pomelo POM-034', 'g-blue',   '24°C','60%','Partly Cloudy',18,30,'Low Risk', 'Monitor humidity'],
+    ['Pineapple PNA-019','g-green','23°C','58%','Sunny',12,20,'Low Risk', 'Normal sales'],
+    ['Banana BNA-041', 'g-emerald','22°C','55%','Clear',8, 12,'Fresh',    'Optimal condition'],
 ];
 $statusColors = ['Critical'=>'badge-red','High Risk'=>'badge-orange','Moderate'=>'badge-amber','Low Risk'=>'badge-blue','Fresh'=>'badge-green'];
 @endphp
@@ -173,26 +177,25 @@ $statusColors = ['Critical'=>'badge-red','High Risk'=>'badge-orange','Moderate'=
     </td>
     <td class="font-semibold text-[13px] {{ (int)$r[2] > 28 ? 'text-red-600' : 'text-gray-600' }}">{{ $r[2] }}</td>
     <td class="text-[13px] {{ (int)$r[3] > 75 ? 'text-amber-600 font-semibold' : 'text-gray-600' }}">{{ $r[3] }}</td>
-    <td class="text-gray-500 text-[12.5px]">{{ $r[4] }}</td>
-    <td><span class="badge {{ $r[5]==='High'?'badge-amber':($r[5]==='Med'?'badge-blue':'badge-gray') }} text-[10px]">{{ $r[5] }}</span></td>
+    <td class="text-gray-600 text-[12.5px] font-medium">{{ $r[4] }}</td>
     <td>
         <div class="flex items-center gap-2">
             <div class="progress-bar w-16">
-                <div class="{{ $r[6]>=70?'bg-red-500':($r[6]>=40?'bg-amber-500':'bg-green-500') }} h-full rounded-full" style="width:{{ $r[6] }}%"></div>
+                <div class="{{ $r[5]>=70?'bg-red-500':($r[5]>=40?'bg-amber-500':'bg-green-500') }} h-full rounded-full" style="width:{{ $r[5] }}%"></div>
             </div>
-            <span class="text-[12.5px] font-bold {{ $r[6]>=70?'text-red-600':($r[6]>=40?'text-amber-600':'text-green-600') }}">{{ $r[6] }}%</span>
+            <span class="text-[12.5px] font-bold {{ $r[5]>=70?'text-red-600':($r[5]>=40?'text-amber-600':'text-green-600') }}">{{ $r[5] }}%</span>
         </div>
     </td>
     <td>
         <div class="flex gap-0.5 items-end">
             @for($s=1;$s<=5;$s++)
-            <div class="w-2 h-5 rounded-sm {{ $s<=round($r[7]/20) ? ($r[7]>=80?'bg-red-500':($r[7]>=60?'bg-orange-500':($r[7]>=40?'bg-amber-400':'bg-green-500'))) : 'bg-gray-200' }}"></div>
+            <div class="w-2 h-5 rounded-sm {{ $s<=round($r[6]/20) ? ($r[6]>=80?'bg-red-500':($r[6]>=60?'bg-orange-500':($r[6]>=40?'bg-amber-400':'bg-green-500'))) : 'bg-gray-200' }}"></div>
             @endfor
-            <span class="text-[11px] font-bold ml-1.5 {{ $r[7]>=80?'text-red-600':($r[7]>=60?'text-orange-600':'text-green-600') }}">{{ $r[7] }}</span>
+            <span class="text-[11px] font-bold ml-1.5 {{ $r[6]>=80?'text-red-600':($r[6]>=60?'text-orange-600':'text-green-600') }}">{{ $r[6] }}</span>
         </div>
     </td>
-    <td><span class="badge {{ $statusColors[$r[8]]??'badge-gray' }} text-[11px]">{{ $r[8] }}</span></td>
-    <td class="text-[12px] text-gray-500 max-w-36">{{ $r[9] }}</td>
+    <td><span class="badge {{ $statusColors[$r[7]]??'badge-gray' }} text-[11px]">{{ $r[7] }}</span></td>
+    <td class="text-[12px] text-gray-500 max-w-36">{{ $r[8] }}</td>
 </tr>
 @endforeach
             </tbody>
