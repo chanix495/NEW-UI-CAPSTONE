@@ -75,35 +75,76 @@ Route::middleware(['auth'])->group(function () {
     
     // Owner only routes
     Route::middleware(['role:owner'])->group(function () {
-        Route::get('/dashboard', fn() => view('pages.dashboard'))->name('dashboard');
+        Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
         Route::get('/users', fn() => view('pages.users'))->name('users');
         Route::get('/decision-support', fn() => view('pages.decision-support'))->name('decision-support');
     });
     
     // Owner + Manager routes
     Route::middleware(['role:owner,manager'])->group(function () {
-        Route::get('/inventory', fn() => view('pages.inventory'))->name('inventory');
-        Route::get('/sales', fn() => view('pages.sales'))->name('sales');
+        Route::get('/inventory', [\App\Http\Controllers\InventoryController::class, 'page'])->name('inventory');
+        Route::get('/sales', [\App\Http\Controllers\SalesController::class, 'page'])->name('sales');
         Route::get('/forecast', fn() => view('pages.forecast'))->name('forecast');
         Route::get('/spoilage', fn() => view('pages.spoilage'))->name('spoilage');
         Route::get('/analytics', fn() => view('pages.analytics'))->name('analytics');
-        Route::get('/reports', fn() => view('pages.reports'))->name('reports');
+        Route::get('/reports', [\App\Http\Controllers\ReportsController::class, 'page'])->name('reports');
     });
     
     // All authenticated users (Owner + Manager + Cashier)
-    Route::get('/pos', fn() => view('pages.pos'))->name('pos');
-    Route::get('/notifications', fn() => view('pages.notifications'))->name('notifications');
+    Route::get('/pos', [\App\Http\Controllers\SalesController::class, 'pos'])->name('pos');
+    Route::get('/notifications', [\App\Http\Controllers\NotificationsController::class, 'page'])->name('notifications');
     Route::get('/settings', fn() => view('pages.settings'))->name('settings');
 });
 
-// Products API Routes (AJAX endpoints for Products module)
+// API Routes (AJAX endpoints for all modules)
 Route::prefix('api')->middleware(['auth'])->group(function () {
+    
+    // Owner + Manager routes
     Route::middleware(['role:owner,manager'])->group(function () {
+        
+        // Products API
         Route::get('/products', [ProductController::class, 'index'])->name('api.products.index');
         Route::post('/products', [ProductController::class, 'store'])->name('api.products.store');
         Route::get('/products/{id}', [ProductController::class, 'show'])->name('api.products.show');
         Route::put('/products/{id}', [ProductController::class, 'update'])->name('api.products.update');
         Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('api.products.destroy');
         Route::get('/products/categories/list', [ProductController::class, 'categories'])->name('api.products.categories');
+        
+        // Inventory API
+        Route::get('/inventory', [\App\Http\Controllers\InventoryController::class, 'index'])->name('api.inventory.index');
+        Route::post('/inventory/stock-in', [\App\Http\Controllers\InventoryController::class, 'stockIn'])->name('api.inventory.stock-in');
+        Route::post('/inventory/stock-out', [\App\Http\Controllers\InventoryController::class, 'stockOut'])->name('api.inventory.stock-out');
+        Route::post('/inventory/stock-adjustment', [\App\Http\Controllers\InventoryController::class, 'stockAdjustment'])->name('api.inventory.stock-adjustment');
+        Route::get('/inventory/stats', [\App\Http\Controllers\InventoryController::class, 'getStats'])->name('api.inventory.stats');
+        Route::get('/inventory/low-stock', [\App\Http\Controllers\InventoryController::class, 'getLowStock'])->name('api.inventory.low-stock');
+        Route::get('/inventory/expiring', [\App\Http\Controllers\InventoryController::class, 'getExpiringItems'])->name('api.inventory.expiring');
+        
+        // Sales Management API
+        Route::get('/sales', [\App\Http\Controllers\SalesController::class, 'index'])->name('api.sales.index');
+        Route::get('/sales/stats', [\App\Http\Controllers\SalesController::class, 'getStats'])->name('api.sales.stats');
+        Route::get('/sales/daily', [\App\Http\Controllers\SalesController::class, 'getDailySales'])->name('api.sales.daily');
+        
+        // Reports API
+        Route::get('/reports/sales', [\App\Http\Controllers\ReportsController::class, 'salesReport'])->name('api.reports.sales');
+        Route::get('/reports/inventory', [\App\Http\Controllers\ReportsController::class, 'inventoryReport'])->name('api.reports.inventory');
+        Route::get('/reports/expiry', [\App\Http\Controllers\ReportsController::class, 'expiryReport'])->name('api.reports.expiry');
+        Route::get('/reports/profit-loss', [\App\Http\Controllers\ReportsController::class, 'profitLossReport'])->name('api.reports.profit-loss');
     });
+    
+    // Owner only routes
+    Route::middleware(['role:owner'])->group(function () {
+        // Dashboard API
+        Route::get('/dashboard/metrics', [\App\Http\Controllers\DashboardController::class, 'getDashboardMetrics'])->name('api.dashboard.metrics');
+        Route::get('/dashboard/sales-trend', [\App\Http\Controllers\DashboardController::class, 'getSalesTrend'])->name('api.dashboard.sales-trend');
+        Route::get('/dashboard/inventory-health', [\App\Http\Controllers\DashboardController::class, 'getInventoryHealth'])->name('api.dashboard.inventory-health');
+    });
+    
+    // All authenticated users (Owner + Manager + Cashier) - POS and Notifications
+    Route::get('/pos/products', [\App\Http\Controllers\SalesController::class, 'getAvailableProducts'])->name('api.pos.products');
+    Route::post('/pos/sale', [\App\Http\Controllers\SalesController::class, 'createSale'])->name('api.pos.sale');
+    
+    Route::get('/notifications', [\App\Http\Controllers\NotificationsController::class, 'index'])->name('api.notifications.index');
+    Route::post('/notifications/generate', [\App\Http\Controllers\NotificationsController::class, 'generateNotifications'])->name('api.notifications.generate');
+    Route::get('/notifications/count', [\App\Http\Controllers\NotificationsController::class, 'getCount'])->name('api.notifications.count');
+    Route::get('/notifications/unread-count', [\App\Http\Controllers\NotificationsController::class, 'getUnreadCount'])->name('api.notifications.unread-count');
 });

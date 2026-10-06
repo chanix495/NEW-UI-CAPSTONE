@@ -1,6 +1,9 @@
 ﻿<x-app-layout>
 <x-slot name="title">Inventory — FreshTrack</x-slot>
-<div x-data="{ 
+
+<script>
+function inventoryData() {
+    return {
     addProductModal:false,
     stockInModal:false,
     stockOutModal:false,
@@ -50,6 +53,16 @@
     dateReceived: new Date().toISOString().split('T')[0],
     referenceNumber: '',
     
+    // Add Product data
+    newProduct: {
+        name: '',
+        category: '',
+        unit: '',
+        description: '',
+        skuCode: '',
+        shelfLife: 0
+    },
+    
     // Product shelf life data (in days)
     productShelfLife: {
         'Mango': 14,
@@ -59,6 +72,25 @@
         'Lanzones': 10,
         'Banana': 7,
         'Pineapple': 14
+    },
+    
+    generateSKUCode(productName) {
+        if (!productName) return '';
+        const prefix = productName.substring(0, 3).toUpperCase();
+        const timestamp = Date.now().toString().slice(-4);
+        const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+        return `${prefix}-${timestamp}${random}`;
+    },
+    
+    getShelfLifeForProduct(productName) {
+        return this.productShelfLife[productName] || 14;
+    },
+    
+    updateProductSKU() {
+        if (this.newProduct.name) {
+            this.newProduct.skuCode = this.generateSKUCode(this.newProduct.name);
+            this.newProduct.shelfLife = this.getShelfLifeForProduct(this.newProduct.name);
+        }
     },
     
     generateBatchId(product) {
@@ -159,16 +191,25 @@
     },
     
     get availableStock() {
-        // This would come from your actual inventory data
-        return [
-            { product: 'Mango', batchId: 'MNG-001', quantity: 285, category: 'Tropical Fruit', freshness: 92 },
-            { product: 'Durian', batchId: 'DUR-112', quantity: 145, category: 'Tropical Fruit', freshness: 78 },
-            { product: 'Pomelo', batchId: 'POM-034', quantity: 8, category: 'Citrus', freshness: 16 },
-            { product: 'Mangosteen', batchId: 'MGS-078', quantity: 92, category: 'Tropical Fruit', freshness: 85 },
-            { product: 'Lanzones', batchId: 'LNZ-055', quantity: 22, category: 'Seasonal', freshness: 44 },
-            { product: 'Banana', batchId: 'BNA-041', quantity: 210, category: 'Tropical Fruit', freshness: 95 },
-            { product: 'Pineapple', batchId: 'PNA-019', quantity: 118, category: 'Tropical Fruit', freshness: 88 },
-        ];
+        // Get from actual inventory data passed from backend
+        var stock = [];
+        @if(isset($inventoryItems))
+            @foreach($inventoryItems as $item)
+                @foreach($item->batches as $batch)
+                    @if($batch->status === 'available' && $batch->quantity > 0)
+                        stock.push({
+                            product: '{{ $item->name }}',
+                            batchId: {{ $batch->id }},
+                            batchCode: '{{ $batch->batch_code }}',
+                            quantity: {{ $batch->quantity }},
+                            category: '{{ $item->category }}',
+                            freshness: {{ $batch->remaining_shelf_life ?? 0 }}
+                        });
+                    @endif
+                @endforeach
+            @endforeach
+        @endif
+        return stock;
     },
     
     get filteredStock() {
@@ -229,6 +270,7 @@
                 this.stockOutItems.push({
                     product: this.selectedBatch.product,
                     batchId: this.selectedBatch.batchId,
+                    batchCode: this.selectedBatch.batchCode,
                     quantity: parseFloat(this.stockOutQuantity),
                     availableQty: this.selectedBatch.quantity
                 });
@@ -255,16 +297,50 @@
     },
     
     saveStockOut() {
+        var self = this;
         if (this.stockOutType && this.stockOutDate && this.stockOutItems.length > 0) {
-            console.log('Stock Out Transaction:', {
-                referenceNumber: this.stockOutReference,
+            var mappedItems = [];
+            for (var i = 0; i < this.stockOutItems.length; i++) {
+                var item = this.stockOutItems[i];
+                mappedItems.push({
+                    batch_id: item.batchId,
+                    quantity: parseFloat(item.quantity)
+                });
+            }
+            
+            var stockOutData = {
+                items: mappedItems,
                 type: this.stockOutType,
-                reason: this.stockOutReason,
-                date: this.stockOutDate,
-                items: this.stockOutItems
+                notes: this.stockOutReason || 'Stock out transaction',
+                reference: this.stockOutReference,
+                date: this.stockOutDate
+            };
+
+            console.log('Sending Stock Out:', stockOutData);
+
+            fetch('/api/inventory/stock-out', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify(stockOutData)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(result) {
+                if (result.success) {
+                    alert('✓ Stock Out completed successfully!');
+                    self.resetStockOutModal();
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (result.message || 'Failed to process stock out'));
+                    console.error('Stock Out Error:', result);
+                }
+            })
+            .catch(function(error) {
+                alert('Error: Failed to connect to server');
+                console.error('Stock Out Error:', error);
             });
-            // Reset form
-            this.resetStockOutModal();
         }
     },
     
@@ -327,16 +403,51 @@
     },
     
     saveAdjustment() {
+        var self = this;
         if (this.adjustmentItems.length > 0 && this.adjustmentReason) {
-            console.log('Stock Adjustment:', {
-                reference: this.adjustmentReference,
-                date: this.adjustmentDate,
+            var mappedItems = [];
+            for (var i = 0; i < this.adjustmentItems.length; i++) {
+                var item = this.adjustmentItems[i];
+                mappedItems.push({
+                    batch_id: item.batchId,
+                    quantity: parseFloat(item.quantity)
+                });
+            }
+            
+            var adjustmentData = {
+                items: mappedItems,
+                type: this.adjustmentType,
                 reason: this.adjustmentReason,
-                notes: this.adjustmentNotes,
-                items: this.adjustmentItems,
-                totalItems: this.adjustmentItems.length
+                notes: this.adjustmentNotes || '',
+                reference: this.adjustmentReference,
+                date: this.adjustmentDate
+            };
+
+            console.log('Sending Stock Adjustment:', adjustmentData);
+
+            fetch('/api/inventory/stock-adjustment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify(adjustmentData)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(result) {
+                if (result.success) {
+                    alert('✓ Stock Adjustment completed successfully!');
+                    self.resetAdjustmentModal();
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (result.message || 'Failed to process adjustment'));
+                    console.error('Adjustment Error:', result);
+                }
+            })
+            .catch(function(error) {
+                alert('Error: Failed to connect to server');
+                console.error('Adjustment Error:', error);
             });
-            this.resetAdjustmentModal();
         }
     },
     
@@ -355,21 +466,65 @@
     },
     
     saveStockIn() {
+        var self = this;
         if (this.supplier && this.dateReceived && this.stockInItems.length > 0) {
-            console.log('Stock In Transaction:', {
-                referenceNumber: this.referenceNumber,
+            // Prepare data for API
+            var mappedItems = [];
+            for (var i = 0; i < this.stockInItems.length; i++) {
+                var item = this.stockInItems[i];
+                mappedItems.push({
+                    product_id: item.product_id || null,
+                    product_name: item.product,
+                    quantity: parseFloat(item.quantity),
+                    price_per_unit: parseFloat(item.unitCost),
+                    batch_code: item.batchId,
+                    expiry_date: item.expirationDate,
+                    supplier: self.supplier
+                });
+            }
+            
+            var stockInData = {
                 supplier: this.supplier,
-                dateReceived: this.dateReceived,
-                items: this.stockInItems,
-                totalAmount: this.getTotalAmount()
+                received_date: this.dateReceived,
+                reference_number: this.referenceNumber,
+                items: mappedItems
+            };
+
+            console.log('Sending Stock In:', stockInData);
+
+            // Call API
+            fetch('/api/inventory/stock-in', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify(stockInData)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(result) {
+                if (result.success) {
+                    alert('✓ Stock In completed successfully!\n\nReference: ' + self.referenceNumber);
+                    
+                    // Reset form
+                    self.stockInItems = [];
+                    self.supplier = '';
+                    self.dateReceived = new Date().toISOString().split('T')[0];
+                    self.referenceNumber = '';
+                    self.stockInStep = 1;
+                    self.stockInModal = false;
+                    
+                    // Reload page to show updated data
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (result.message || 'Failed to save stock in'));
+                    console.error('Stock In Error:', result);
+                }
+            })
+            .catch(function(error) {
+                alert('Error: Failed to connect to server');
+                console.error('Stock In Error:', error);
             });
-            // Reset form
-            this.stockInItems = [];
-            this.supplier = '';
-            this.dateReceived = new Date().toISOString().split('T')[0];
-            this.referenceNumber = '';
-            this.stockInStep = 1;
-            this.stockInModal = false;
         }
     },
     
@@ -401,10 +556,65 @@
     },
     
     saveProduct() {
-        console.log('New Product Added to Master List');
-        this.addProductModal = false;
+        var self = this;
+        if (this.newProduct.name && this.newProduct.category && this.newProduct.unit) {
+            var productData = {
+                name: this.newProduct.name,
+                category: this.newProduct.category,
+                unit: this.newProduct.unit,
+                description: this.newProduct.description || '',
+                sku_code: this.newProduct.skuCode,
+                shelf_life: this.newProduct.shelfLife,
+                price_per_unit: 0, // Default price, will be set during stock in
+                reorder_level: 50
+            };
+
+            console.log('Saving Product:', productData);
+
+            fetch('/api/products', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify(productData)
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(result) {
+                if (result.success) {
+                    alert('✓ Product added successfully!');
+                    
+                    // Reset form
+                    self.newProduct = {
+                        name: '',
+                        category: '',
+                        unit: '',
+                        description: '',
+                        skuCode: '',
+                        shelfLife: 0
+                    };
+                    self.addProductModal = false;
+                    
+                    // Reload page to show new product
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (result.message || 'Failed to add product'));
+                    console.error('Add Product Error:', result);
+                }
+            })
+            .catch(function(error) {
+                alert('Error: Failed to connect to server');
+                console.error('Add Product Error:', error);
+            });
+        } else {
+            alert('Please fill in all required fields (Name, Category, Unit)');
+        }
     }
-}" @open-add.window="stockInModal=true" class="flex gap-6">
+    };
+}
+</script>
+
+<div x-data="inventoryData()" @open-add.window="stockInModal=true" class="flex gap-6">
 
 {{-- Expandable Sidebar --}}
 <div class="transition-all duration-300 flex-shrink-0"
@@ -586,32 +796,10 @@ $summaryCards = [
 {{-- Grid Cards --}}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-6 fade-up delay-3">
 @php
-// Group items by fruit type
-$allItems = [
-    ['Mango',      'MNG-001','285 kg','Jun 26','Davao Fresh Farms','₱120/kg','Available','badge-green', 92,'Fresh', 12, 'Old Stock'],
-    ['Mango',      'MNG-002','155 kg','Jun 24','Mt. Apo Growers',  '₱118/kg','Low Stock','badge-amber', 35,'Fair', 10, 'Old Stock'],
-    ['Mango',      'MNG-003','200 kg','Jun 30','Davao Fresh Farms','₱120/kg','Available','badge-green', 98,'Fresh', 14, 'New Stock'],
-    ['Durian',     'DUR-112','145 kg','Jun 25','Mt. Apo Growers',  '₱320/kg','Available','badge-green', 78,'Good', 11, 'Old Stock'],
-    ['Durian',     'DUR-113','0 kg',  '—',     'Mt. Apo Growers',  '₱320/kg','Out of Stock','badge-gray', 0,'Depleted', 0, 'Old Stock'],
-    ['Pomelo',     'POM-034','8 kg',  'Jul 2', 'Sta. Cruz Orchards','₱70/kg','Critical', 'badge-red',   16,'Critical', 18, 'Old Stock'],
-    ['Mangosteen', 'MGS-078','92 kg', 'Jun 28','Davao Fresh Farms','₱170/kg','Available','badge-green', 85,'Fresh', 14, 'Old Stock'],
-    ['Lanzones',   'LNZ-055','22 kg', 'Jun 27','Mt. Apo Growers',  '₱85/kg', 'Low Stock','badge-amber', 44,'Fair', 13, 'Old Stock'],
-    ['Pineapple',  'PNA-019','118 kg','Jun 30','Sta. Cruz Orchards','₱75/kg','Available','badge-green', 88,'Fresh', 16, 'Old Stock'],
-    ['Banana',     'BNA-041','210 kg','Jun 29','Davao Fresh Farms','₱42/kg', 'Available','badge-green', 95,'Excellent', 15, 'Old Stock'],
-];
-
-$groupedItems = [];
-foreach ($allItems as $item) {
-    $fruit = $item[0];
-    if (!isset($groupedItems[$fruit])) {
-        $groupedItems[$fruit] = [];
-    }
-    $groupedItems[$fruit][] = $item;
-}
-
 $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4';
 @endphp
 
+@if(isset($groupedItems) && count($groupedItems) > 0)
 @foreach($groupedItems as $fruit => $batches)
 @php
     // Calculate total quantity and worst status for the fruit
@@ -620,10 +808,18 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
     $worstBadge = 'badge-green';
     $statusPriority = ['Out of Stock' => 4, 'Critical' => 3, 'Low Stock' => 2, 'Available' => 1];
     $highestPriority = 0;
+    $totalValue = 0;
+    $batchCount = 0;
     
     foreach ($batches as $batch) {
         $qty = (float) str_replace(' kg', '', $batch[2]);
         $totalQty += $qty;
+        
+        // Extract price from string like "₱120.00/kg"
+        $priceString = $batch[5];
+        $priceValue = (float) str_replace(['₱', '/kg', ','], '', $priceString);
+        $totalValue += ($qty * $priceValue);
+        $batchCount++;
         
         $status = $batch[6];
         $priority = $statusPriority[$status] ?? 0;
@@ -633,6 +829,10 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
             $worstBadge = $batch[7];
         }
     }
+    
+    // Calculate average price
+    $avgPrice = $totalQty > 0 ? ($totalValue / $totalQty) : 0;
+    $avgPriceFormatted = '₱' . number_format($avgPrice, 2) . '/kg';
 @endphp
 
 <div class="card overflow-hidden card-lift fade-up delay-{{ min($loop->index+1,8) }}">
@@ -660,7 +860,7 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
                     <p class="text-[11.5px] text-gray-400">Total stock</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-[14px] font-bold text-violet-700">{{ $batches[0][5] }}</p>
+                    <p class="text-[14px] font-bold text-violet-700">{{ $avgPriceFormatted }}</p>
                     <p class="text-[11px] text-gray-400">Avg price</p>
                 </div>
             </div>
@@ -724,6 +924,26 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
     </div>
 </div>
 @endforeach
+@else
+{{-- Empty State --}}
+<div class="col-span-full">
+    <div class="card p-12 text-center">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+        </div>
+        <h3 class="text-lg font-bold text-gray-900 mb-2">No Products Yet</h3>
+        <p class="text-sm text-gray-500 mb-4">Add your first product to get started</p>
+        <button @click="addProductModal=true" class="btn btn-violet btn-sm mx-auto">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            Add Product
+        </button>
+    </div>
+</div>
+@endif
 </div>
 </div>
 
@@ -808,63 +1028,71 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach([
-                        ['Mango', 'Tropical Fruit', '₱120/kg', '440 kg', 'Available', 'badge-green'],
-                        ['Durian', 'Tropical Fruit', '₱320/kg', '145 kg', 'Available', 'badge-green'],
-                        ['Pomelo', 'Citrus', '₱70/kg', '8 kg', 'Low Stock', 'badge-amber'],
-                        ['Mangosteen', 'Tropical Fruit', '₱170/kg', '92 kg', 'Available', 'badge-green'],
-                        ['Lanzones', 'Seasonal', '₱85/kg', '22 kg', 'Low Stock', 'badge-amber'],
-                        ['Pineapple', 'Tropical Fruit', '₱75/kg', '118 kg', 'Available', 'badge-green'],
-                        ['Banana', 'Tropical Fruit', '₱42/kg', '210 kg', 'Available', 'badge-green']
-                    ] as $product)
-                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td class="py-4 px-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                                    </svg>
+                    @if(isset($inventoryItems) && $inventoryItems->count() > 0)
+                        @foreach($inventoryItems as $item)
+                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <td class="py-4 px-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-violet-100 rounded-lg flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                        </svg>
+                                    </div>
+                                    <span class="font-semibold text-gray-900 text-sm">{{ $item->name }}</span>
                                 </div>
-                                <span class="font-semibold text-gray-900 text-sm">{{ $product[0] }}</span>
-                            </div>
-                        </td>
-                        <td class="py-4 px-4 text-sm text-gray-600">{{ $product[1] }}</td>
-                        <td class="py-4 px-4 text-sm font-bold text-violet-700">{{ $product[2] }}</td>
-                        <td class="py-4 px-4 text-sm font-semibold text-gray-900">{{ $product[3] }}</td>
-                        <td class="py-4 px-4">
-                            <span class="badge {{ $product[5] }} text-xs">{{ $product[4] }}</span>
-                        </td>
-                        <td class="py-4 px-4">
-                            <div class="flex gap-2">
-                                {{-- View Button --}}
-                                <button @click="viewModal=true; selected='{{ $product[0] }}'" 
-                                        class="p-2 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
-                                        title="View Details">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </td>
+                            <td class="py-4 px-4 text-sm text-gray-600">{{ $item->category ?? 'N/A' }}</td>
+                            <td class="py-4 px-4 text-sm font-semibold text-gray-900">₱{{ number_format($item->price_per_unit, 2) }}/{{ $item->unit }}</td>
+                            <td class="py-4 px-4 text-sm font-semibold text-gray-900">{{ number_format($item->stock_quantity, 0) }} {{ $item->unit }}</td>
+                            <td class="py-4 px-4">
+                                @php
+                                    $status = 'Available';
+                                    $badgeClass = 'badge-green';
+                                    if ($item->stock_quantity <= 0) {
+                                        $status = 'Out of Stock';
+                                        $badgeClass = 'badge-gray';
+                                    } elseif ($item->stock_quantity <= $item->reorder_level) {
+                                        $status = 'Low Stock';
+                                        $badgeClass = 'badge-amber';
+                                    }
+                                @endphp
+                                <span class="badge {{ $badgeClass }}">{{ $status }}</span>
+                            </td>
+                            <td class="py-4 px-4">
+                                <div class="flex items-center gap-2">
+                                    <button class="p-2 hover:bg-violet-50 rounded-lg text-gray-400 hover:text-violet-600 transition-colors" title="View Details">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="p-2 hover:bg-violet-50 rounded-lg text-gray-400 hover:text-violet-600 transition-colors" title="Edit">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600 transition-colors" title="Delete">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
+                    @else
+                        <tr>
+                            <td colspan="6" class="py-12 text-center">
+                                <div class="flex flex-col items-center justify-center">
+                                    <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                                     </svg>
-                                </button>
-                                {{-- Edit Button --}}
-                                <button @click="editModal=true; selected='{{ $product[0] }}'" 
-                                        class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                        title="Edit Product">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                    </svg>
-                                </button>
-                                {{-- Delete Button --}}
-                                <button @click="deleteModal=true; selected='{{ $product[0] }}'" 
-                                        class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                        title="Delete Product">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforeach
+                                    <p class="text-gray-500 text-sm font-semibold">No products found</p>
+                                    <p class="text-gray-400 text-xs mt-1">Add your first product to get started</p>
+                                </div>
+                            </td>
+                        </tr>
+                    @endif
                 </tbody>
             </table>
         </div>
@@ -886,13 +1114,8 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
 
     <div class="card p-6">
         <div class="space-y-4">
-            @foreach([
-                ['MNG-001', 'Mango', '285 kg', 'Davao Fresh Farms', 'Jun 16, 2026', '₱34,200', 'Received'],
-                ['DUR-112', 'Durian', '145 kg', 'Mt. Apo Growers', 'Jun 15, 2026', '₱46,400', 'Received'],
-                ['POM-034', 'Pomelo', '50 kg', 'Sta. Cruz Orchards', 'Jun 12, 2026', '₱3,500', 'Received'],
-                ['MGS-078', 'Mangosteen', '92 kg', 'Davao Fresh Farms', 'Jun 18, 2026', '₱15,640', 'Pending'],
-                ['BNA-041', 'Banana', '210 kg', 'Davao Fresh Farms', 'Jun 19, 2026', '₱8,820', 'Received']
-            ] as $stockIn)
+            @if(isset($stockInRecords) && count($stockInRecords) > 0)
+            @foreach($stockInRecords as $stockIn)
             <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-100">
                 <div class="flex items-center gap-4 flex-1">
                     <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
@@ -920,6 +1143,24 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
                 </div>
             </div>
             @endforeach
+            @else
+            {{-- Empty State --}}
+            <div class="text-center py-12">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">No Stock In Records Yet</h3>
+                <p class="text-sm text-gray-500 mb-4">Start adding inventory to see stock in history</p>
+                <button @click="stockInModal=true" class="btn btn-violet btn-sm mx-auto">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add Stock In
+                </button>
+            </div>
+            @endif
         </div>
     </div>
 </div>
@@ -939,13 +1180,8 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
 
     <div class="card p-6">
         <div class="space-y-4">
-            @foreach([
-                ['SO-1245', 'Mango', '45 kg', 'Sales Transaction', 'Today, 2:30 PM', '₱5,400', 'Completed'],
-                ['SO-1244', 'Banana', '78 kg', 'Sales Transaction', 'Today, 11:15 AM', '₱3,276', 'Completed'],
-                ['SO-1243', 'Durian', '22 kg', 'Sales Transaction', 'Yesterday, 4:45 PM', '₱7,040', 'Completed'],
-                ['SO-1242', 'Pomelo', '15 kg', 'Spoilage', 'Yesterday, 10:00 AM', '₱0', 'Processed'],
-                ['SO-1241', 'Mangosteen', '33 kg', 'Sales Transaction', 'Jun 19, 3:20 PM', '₱5,610', 'Completed']
-            ] as $stockOut)
+            @if(isset($stockOutRecords) && count($stockOutRecords) > 0)
+            @foreach($stockOutRecords as $stockOut)
             <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-100">
                 <div class="flex items-center gap-4 flex-1">
                     <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
@@ -973,6 +1209,24 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
                 </div>
             </div>
             @endforeach
+            @else
+            {{-- Empty State --}}
+            <div class="text-center py-12">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16v-4m0 4h4"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">No Stock Out Records Yet</h3>
+                <p class="text-sm text-gray-500 mb-4">Record your first stock out to see history</p>
+                <button @click="stockOutModal=true; stockOutReference=generateStockOutReference()" class="btn btn-violet btn-sm mx-auto">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Record Stock Out
+                </button>
+            </div>
+            @endif
         </div>
     </div>
 </div>
@@ -992,13 +1246,8 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
 
     <div class="card p-6">
         <div class="space-y-4">
-            @foreach([
-                ['ADJ-089', 'Mango', '+12 kg', 'Recount - Found additional stock', 'Jun 20, 10:30 AM', 'John Doe', 'badge-green'],
-                ['ADJ-088', 'Pomelo', '-5 kg', 'Damage during handling', 'Jun 19, 2:15 PM', 'Maria Cruz', 'badge-red'],
-                ['ADJ-087', 'Durian', '+8 kg', 'System correction', 'Jun 18, 11:00 AM', 'Pedro Santos', 'badge-green'],
-                ['ADJ-086', 'Lanzones', '-3 kg', 'Quality control removal', 'Jun 17, 4:30 PM', 'John Doe', 'badge-red'],
-                ['ADJ-085', 'Banana', '+25 kg', 'Recount - System error', 'Jun 16, 9:45 AM', 'Maria Cruz', 'badge-green']
-            ] as $adjustment)
+            @if(isset($adjustmentRecords) && count($adjustmentRecords) > 0)
+            @foreach($adjustmentRecords as $adjustment)
             <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-100">
                 <div class="flex items-center gap-4 flex-1">
                     <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
@@ -1022,6 +1271,24 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
                 </div>
             </div>
             @endforeach
+            @else
+            {{-- Empty State --}}
+            <div class="text-center py-12">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">No Adjustments Yet</h3>
+                <p class="text-sm text-gray-500 mb-4">Create your first stock adjustment</p>
+                <button @click="adjustmentModal=true; adjustmentReference=generateAdjustmentReference()" class="btn btn-violet btn-sm mx-auto">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    New Adjustment
+                </button>
+            </div>
+            @endif
         </div>
     </div>
 </div>
@@ -1304,13 +1571,13 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
                                             <label class="inp-label">Product *</label>
                                             <select x-model="currentItem.product" class="inp bg-white" required>
                                                 <option value="">Select Product</option>
-                                                <option>Mango</option>
-                                                <option>Durian</option>
-                                                <option>Pomelo</option>
-                                                <option>Mangosteen</option>
-                                                <option>Lanzones</option>
-                                                <option>Banana</option>
-                                                <option>Pineapple</option>
+                                                @if(isset($inventoryItems) && $inventoryItems->count() > 0)
+                                                    @foreach($inventoryItems as $item)
+                                                        <option value="{{ $item->name }}">{{ $item->name }}</option>
+                                                    @endforeach
+                                                @else
+                                                    <option disabled>No products available - Add products first</option>
+                                                @endif
                                             </select>
                                         </div>
                                         
@@ -1682,12 +1949,17 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
         <div class="p-6 space-y-4">
             <div>
                 <label class="inp-label">Product Name *</label>
-                <input type="text" placeholder="e.g., Mango, Durian, Pomelo" class="inp" required>
+                <input type="text" 
+                       x-model="newProduct.name" 
+                       @input="updateProductSKU()"
+                       placeholder="e.g., Mango, Durian, Pomelo" 
+                       class="inp" 
+                       required>
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="inp-label">Category *</label>
-                    <select class="inp" required>
+                    <select x-model="newProduct.category" class="inp" required>
                         <option value="">Select Category</option>
                         <option>Tropical Fruit</option>
                         <option>Citrus</option>
@@ -1696,7 +1968,7 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
                 </div>
                 <div>
                     <label class="inp-label">Unit of Measure *</label>
-                    <select class="inp" required>
+                    <select x-model="newProduct.unit" class="inp" required>
                         <option value="">Select Unit</option>
                         <option>kg (Kilogram)</option>
                         <option>pc (Piece)</option>
@@ -1704,31 +1976,21 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
                     </select>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="inp-label">Default Shelf Life (days) *</label>
-                    <input type="number" placeholder="e.g., 14" min="1" class="inp" required>
-                </div>
-                <div>
-                    <label class="inp-label">SKU/Code</label>
-                    <input type="text" placeholder="e.g., MANGO-001" class="inp">
-                </div>
+            <div>
+                <label class="inp-label">SKU/Code (Auto-generated)</label>
+                <input type="text" 
+                       x-model="newProduct.skuCode" 
+                       placeholder="Will be generated automatically" 
+                       class="inp bg-gray-50 cursor-not-allowed" 
+                       readonly>
+                <p class="text-xs text-gray-500 mt-1">SKU code is automatically generated based on product name</p>
             </div>
             <div>
                 <label class="inp-label">Description</label>
-                <textarea rows="3" placeholder="Product description, origin, or special notes..." class="inp"></textarea>
-            </div>
-            
-            {{-- Optional: Product Image Upload --}}
-            <div>
-                <label class="inp-label">Product Image (Optional)</label>
-                <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-violet-400 transition-colors cursor-pointer">
-                    <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
-                    <p class="text-sm text-gray-500 font-medium">Click to upload product image</p>
-                    <p class="text-xs text-gray-400 mt-1">PNG, JPG up to 5MB</p>
-                </div>
+                <textarea rows="3" 
+                          x-model="newProduct.description" 
+                          placeholder="Product description, origin, or special notes..." 
+                          class="inp"></textarea>
             </div>
         </div>
         <div class="flex gap-3 px-6 pb-6">
@@ -1944,13 +2206,13 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <p class="font-bold text-gray-900 text-xs truncate" x-text="batch.product"></p>
-                                                <span class="text-[10px] px-1.5 py-0.5 rounded font-mono bg-gray-100 text-gray-600" x-text="batch.batchId"></span>
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded font-mono bg-gray-100 text-gray-600" x-text="batch.batchCode"></span>
                                             </div>
                                             <div class="flex items-center gap-2 text-[10px] text-gray-500">
                                                 <span>Avail: <strong x-text="batch.quantity + ' kg'"></strong></span>
                                                 <span class="px-1.5 py-0.5 rounded" 
-                                                      :class="batch.freshness > 70 ? 'bg-green-100 text-green-700' : (batch.freshness > 40 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')"
-                                                      x-text="batch.freshness + '%'"></span>
+                                                      :class="batch.freshness > 14 ? 'bg-green-100 text-green-700' : (batch.freshness > 7 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')"
+                                                      x-text="batch.freshness + 'd'"></span>
                                             </div>
                                         </div>
                                         <div x-show="selectedBatch?.batchId === batch.batchId" class="flex-shrink-0">
@@ -2029,7 +2291,7 @@ $fruitIconPath = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 
                                                 <div class="flex-1 min-w-0">
                                                     <p class="font-bold text-gray-900 text-xs truncate" x-text="item.product"></p>
                                                     <p class="text-[10px] text-gray-500">
-                                                        <span class="font-mono" x-text="item.batchId"></span>
+                                                        <span class="font-mono" x-text="item.batchCode || item.batchId"></span>
                                                     </p>
                                                 </div>
                                             </div>
