@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AnalyticsController;
 
 // Landing
 Route::get('/', fn() => view('landing'))->name('landing');
@@ -86,7 +87,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/sales', [\App\Http\Controllers\SalesController::class, 'page'])->name('sales');
         Route::get('/forecast', fn() => view('pages.forecast'))->name('forecast');
         Route::get('/spoilage', fn() => view('pages.spoilage'))->name('spoilage');
-        Route::get('/analytics', fn() => view('pages.analytics'))->name('analytics');
+        Route::get('/analytics', [AnalyticsController::class, 'page'])->name('analytics');
         Route::get('/reports', [\App\Http\Controllers\ReportsController::class, 'page'])->name('reports');
     });
     
@@ -129,6 +130,18 @@ Route::prefix('api')->middleware(['auth'])->group(function () {
         Route::get('/reports/inventory', [\App\Http\Controllers\ReportsController::class, 'inventoryReport'])->name('api.reports.inventory');
         Route::get('/reports/expiry', [\App\Http\Controllers\ReportsController::class, 'expiryReport'])->name('api.reports.expiry');
         Route::get('/reports/profit-loss', [\App\Http\Controllers\ReportsController::class, 'profitLossReport'])->name('api.reports.profit-loss');
+        
+        // Reports PDF Export
+        Route::get('/reports/sales/pdf', [\App\Http\Controllers\ReportsController::class, 'exportSalesPDF'])->name('api.reports.sales.pdf');
+        
+        // Analytics API
+        Route::get('/analytics/kpis', [AnalyticsController::class, 'getKPIs'])->name('api.analytics.kpis');
+        Route::get('/analytics/revenue-trend', [AnalyticsController::class, 'getRevenueTrend'])->name('api.analytics.revenue-trend');
+        Route::get('/analytics/sales-by-fruit', [AnalyticsController::class, 'getSalesByFruit'])->name('api.analytics.sales-by-fruit');
+        Route::get('/analytics/weekly-sales', [AnalyticsController::class, 'getWeeklySales'])->name('api.analytics.weekly-sales');
+        Route::get('/analytics/cumulative-revenue', [AnalyticsController::class, 'getCumulativeRevenue'])->name('api.analytics.cumulative-revenue');
+        Route::get('/analytics/waste-reduction', [AnalyticsController::class, 'getWasteReduction'])->name('api.analytics.waste-reduction');
+        Route::get('/analytics/stacked-sales', [AnalyticsController::class, 'getStackedSales'])->name('api.analytics.stacked-sales');
     });
     
     // Owner only routes
