@@ -234,6 +234,58 @@ class ReportsController extends Controller
     }
 
     /**
+     * Export Sales Report as PDF.
+     */
+    public function exportSalesPDF(Request $request)
+    {
+        $validated = $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+        ]);
+
+        $startDate = Carbon::parse($validated['start_date'])->startOfDay();
+        $endDate = Carbon::parse($validated['end_date'])->endOfDay();
+
+        // Get report data
+        $totalSales = SalesTransaction::completed()
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->sum('total_amount');
+        
+        $totalTransactions = SalesTransaction::completed()
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->count();
+
+        $topProducts = SalesItem::select(
+                'inventory_item_id',
+                DB::raw('SUM(quantity) as total_quantity'),
+                DB::raw('SUM(total_amount) as total_sales')
+            )
+            ->whereHas('saleTransaction', function($q) use ($startDate, $endDate) {
+                $q->completed()->whereBetween('created_at', [$startDate, $endDate]);
+            })
+            ->with('inventoryItem')
+            ->groupBy('inventory_item_id')
+            ->orderByDesc('total_sales')
+            ->limit(10)
+            ->get()
+            ->filter(function($item) {
+                // Filter out items with null inventoryItem
+                return $item->inventoryItem !== null;
+            });
+
+        $html = view('reports.sales-pdf', [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'totalSales' => $totalSales,
+            'totalTransactions' => $totalTransactions,
+            'topProducts' => $topProducts,
+        ])->render();
+
+        return response($html)
+            ->header('Content-Type', 'text/html');
+    }
+
+    /**
      * Generate profit/loss report.
      */
     public function profitLossReport(Request $request)

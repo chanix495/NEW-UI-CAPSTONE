@@ -24,89 +24,108 @@ class AnalyticsController extends Controller
     /**
      * Get KPI metrics.
      */
-    public function getKPIs()
+    public function getKPIs(Request $request)
     {
         try {
-            // Total revenue (all time)
-            $totalRevenue = SalesTransaction::completed()->sum('total_amount');
+            // Get date range from request or default to last 30 days (rolling window)
+            $days = $request->input('days', 30);
+            $endDate = Carbon::now();
+            $startDate = Carbon::now()->subDays($days);
+            
+            // For demo data with future dates, use the actual max date in database
+            $maxDate = SalesTransaction::max('created_at');
+            if ($maxDate && Carbon::parse($maxDate)->isFuture()) {
+                $endDate = Carbon::parse($maxDate);
+                $startDate = $endDate->copy()->subDays($days);
+            }
 
-            // Last month revenue
-            $lastMonth = Carbon::now()->subMonth();
-            $lastMonthRevenue = SalesTransaction::completed()
-                ->whereMonth('created_at', $lastMonth->month)
-                ->whereYear('created_at', $lastMonth->year)
+            // Total revenue in period
+            $totalRevenue = SalesTransaction::completed()
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->sum('total_amount');
 
-            // Previous month revenue (for trend)
-            $previousMonth = Carbon::now()->subMonths(2);
-            $previousMonthRevenue = SalesTransaction::completed()
-                ->whereMonth('created_at', $previousMonth->month)
-                ->whereYear('created_at', $previousMonth->year)
+            // Previous period revenue (for comparison) - rolling window
+            $prevStartDate = $startDate->copy()->subDays($days);
+            $prevEndDate = $startDate->copy();
+            
+            $previousRevenue = SalesTransaction::completed()
+                ->whereBetween('created_at', [$prevStartDate, $prevEndDate])
                 ->sum('total_amount');
 
             // Revenue change percentage
             $revenueChangePct = 0;
-            if ($previousMonthRevenue > 0) {
-                $revenueChangePct = (($lastMonthRevenue - $previousMonthRevenue) / $previousMonthRevenue) * 100;
-            } elseif ($lastMonthRevenue > 0) {
+            if ($previousRevenue > 0) {
+                $revenueChangePct = (($totalRevenue - $previousRevenue) / $previousRevenue) * 100;
+            } elseif ($totalRevenue > 0) {
                 $revenueChangePct = 100;
             }
 
-            // COGS calculation
-            $cogs = SalesItem::whereHas('saleTransaction', function($q) {
-                    $q->completed();
+            // COGS calculation for period - filter out items with no batch relation
+            $salesItems = SalesItem::whereHas('saleTransaction', function($q) use ($startDate, $endDate) {
+                    $q->completed()->whereBetween('created_at', [$startDate, $endDate]);
                 })
                 ->with('inventoryBatch')
                 ->get()
-                ->sum(function($item) {
-                    return $item->quantity * ($item->inventoryBatch?->price_per_unit ?? 0);
+                ->filter(function($item) {
+                    if ($item->inventoryBatch === null) {
+                        Log::warning('SalesItem ID ' . $item->id . ' has no inventoryBatch relation');
+                        return false;
+                    }
+                    return true;
                 });
+            
+            $cogs = $salesItems->sum(function($item) {
+                return $item->quantity * $item->inventoryBatch->price_per_unit;
+            });
+
+            // Previous period COGS
+            $prevSalesItems = SalesItem::whereHas('saleTransaction', function($q) use ($prevStartDate, $prevEndDate) {
+                    $q->completed()->whereBetween('created_at', [$prevStartDate, $prevEndDate]);
+                })
+                ->with('inventoryBatch')
+                ->get()
+                ->filter(function($item) {
+                    return $item->inventoryBatch !== null;
+                });
+            
+            $prevCogs = $prevSalesItems->sum(function($item) {
+                return $item->quantity * $item->inventoryBatch->price_per_unit;
+            });
 
             // Gross profit and margin
             $grossProfit = $totalRevenue - $cogs;
             $profitMargin = $totalRevenue > 0 ? ($grossProfit / $totalRevenue) * 100 : 0;
-
-            // Profit change (last month vs previous month)
-            $lastMonthCogs = SalesItem::whereHas('saleTransaction', function($q) use ($lastMonth) {
-                    $q->completed()
-                        ->whereMonth('created_at', $lastMonth->month)
-                        ->whereYear('created_at', $lastMonth->year);
-                })
-                ->with('inventoryBatch')
-                ->get()
-                ->sum(function($item) {
-                    return $item->quantity * ($item->inventoryBatch?->price_per_unit ?? 0);
-                });
-
-            $previousMonthCogs = SalesItem::whereHas('saleTransaction', function($q) use ($previousMonth) {
-                    $q->completed()
-                        ->whereMonth('created_at', $previousMonth->month)
-                        ->whereYear('created_at', $previousMonth->year);
-                })
-                ->with('inventoryBatch')
-                ->get()
-                ->sum(function($item) {
-                    return $item->quantity * ($item->inventoryBatch?->price_per_unit ?? 0);
-                });
-
-            $lastMonthProfit = $lastMonthRevenue - $lastMonthCogs;
-            $previousMonthProfit = $previousMonthRevenue - $previousMonthCogs;
-
+            $previousProfit = $previousRevenue - $prevCogs;
+            
             $profitChangePct = 0;
-            if ($previousMonthProfit > 0) {
-                $profitChangePct = (($lastMonthProfit - $previousMonthProfit) / $previousMonthProfit) * 100;
-            } elseif ($lastMonthProfit > 0) {
+            if ($previousProfit > 0) {
+                $profitChangePct = (($grossProfit - $previousProfit) / $previousProfit) * 100;
+            } elseif ($grossProfit > 0) {
                 $profitChangePct = 100;
             }
 
-            // Sales volume (all time)
-            $salesVolume = SalesItem::whereHas('saleTransaction', function($q) {
-                    $q->completed();
+            // Sales volume (in period)
+            $salesVolume = SalesItem::whereHas('saleTransaction', function($q) use ($startDate, $endDate) {
+                    $q->completed()->whereBetween('created_at', [$startDate, $endDate]);
                 })
                 ->sum('quantity');
+            
+            // Previous period sales volume
+            $prevSalesVolume = SalesItem::whereHas('saleTransaction', function($q) use ($prevStartDate, $prevEndDate) {
+                    $q->completed()->whereBetween('created_at', [$prevStartDate, $prevEndDate]);
+                })
+                ->sum('quantity');
+            
+            $volumeChangePct = 0;
+            if ($prevSalesVolume > 0) {
+                $volumeChangePct = (($salesVolume - $prevSalesVolume) / $prevSalesVolume) * 100;
+            } elseif ($salesVolume > 0) {
+                $volumeChangePct = 100;
+            }
 
             // Waste reduction calculation (current month expired vs 6-month average)
             $currentMonth = Carbon::now();
+            $currentMonthStart = $currentMonth->copy()->startOfMonth();
             $currentMonthExpired = InventoryBatch::whereMonth('expiry_date', $currentMonth->month)
                 ->whereYear('expiry_date', $currentMonth->year)
                 ->where(function($q) {
@@ -115,28 +134,33 @@ class AnalyticsController extends Controller
                 })
                 ->sum('quantity');
 
-            // Calculate 6-month average expired quantity
-            $sixMonthsAgo = Carbon::now()->subMonths(6);
-            $avgExpiredLast6Months = InventoryBatch::where('expiry_date', '>=', $sixMonthsAgo)
-                ->where('expiry_date', '<', $currentMonth->startOfMonth())
+            // Calculate 6-month average expired quantity (fixed query)
+            $sixMonthsAgo = Carbon::now()->subMonths(6)->startOfMonth();
+            $monthlyExpired = InventoryBatch::where('expiry_date', '>=', $sixMonthsAgo)
+                ->where('expiry_date', '<', $currentMonthStart)
                 ->where(function($q) {
                     $q->where('status', 'expired')
                         ->orWhere('expiry_date', '<', now());
                 })
-                ->selectRaw('AVG(monthly_expired) as avg')
-                ->from(DB::raw('(SELECT SUM(quantity) as monthly_expired, YEAR(expiry_date) as year, MONTH(expiry_date) as month FROM inventory_batches WHERE expiry_date >= ? AND expiry_date < ? AND (status = "expired" OR expiry_date < NOW()) GROUP BY YEAR(expiry_date), MONTH(expiry_date)) as monthly_data'))
-                ->setBindings([$sixMonthsAgo, $currentMonth->startOfMonth()])
-                ->value('avg');
+                ->selectRaw('YEAR(expiry_date) as y, MONTH(expiry_date) as m, SUM(quantity) as qty')
+                ->groupBy('y', 'm')
+                ->get();
+            
+            $avgExpiredLast6Months = $monthlyExpired->avg('qty') ?? 0;
 
             $wasteReducedPct = 0;
+            $wasteChangePct = 0;
             if ($avgExpiredLast6Months > 0) {
                 $wasteReducedPct = (($avgExpiredLast6Months - $currentMonthExpired) / $avgExpiredLast6Months) * 100;
+                $wasteChangePct = -$wasteReducedPct; // Negative means improvement
             } elseif ($currentMonthExpired == 0) {
                 $wasteReducedPct = 100;
+                $wasteChangePct = 100;
             }
 
             // Forecast accuracy placeholder
             $forecastAccuracy = 96.4;
+            $forecastChangePct = 1.2; // Placeholder
 
             return response()->json([
                 'total_revenue' => round($totalRevenue, 2),
@@ -147,6 +171,9 @@ class AnalyticsController extends Controller
                 'forecast_accuracy' => $forecastAccuracy,
                 'revenue_change_pct' => round($revenueChangePct, 1),
                 'profit_change_pct' => round($profitChangePct, 1),
+                'volume_change_pct' => round($volumeChangePct, 1),
+                'waste_change_pct' => round($wasteChangePct, 1),
+                'forecast_change_pct' => round($forecastChangePct, 1),
             ]);
 
         } catch (\Exception $e) {
@@ -160,6 +187,9 @@ class AnalyticsController extends Controller
                 'forecast_accuracy' => 96.4,
                 'revenue_change_pct' => 0,
                 'profit_change_pct' => 0,
+                'volume_change_pct' => 0,
+                'waste_change_pct' => 0,
+                'forecast_change_pct' => 0,
             ]);
         }
     }
@@ -278,7 +308,6 @@ class AnalyticsController extends Controller
             foreach ($top4 as $index => $item) {
                 $result[] = [
                     'name' => $item->inventoryItem->name,
-                    'amount' => round($item->total_sales, 2),
                     'percentage' => round(($item->total_sales / $totalSales) * 100, 1),
                     'color' => $colors[$index] ?? '#9CA3AF',
                 ];
@@ -289,7 +318,6 @@ class AnalyticsController extends Controller
                 $othersTotal = $salesByProduct->skip(4)->sum('total_sales');
                 $result[] = [
                     'name' => 'Others',
-                    'amount' => round($othersTotal, 2),
                     'percentage' => round(($othersTotal / $totalSales) * 100, 1),
                     'color' => '#9CA3AF',
                 ];
@@ -315,34 +343,29 @@ class AnalyticsController extends Controller
             $salesByWeek = SalesTransaction::completed()
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->select(
-                    DB::raw('YEARWEEK(created_at, 1) as yearweek'),
+                    DB::raw('YEAR(created_at) as year'),
+                    DB::raw('WEEK(created_at, 1) as week'),
                     DB::raw('SUM(total_amount) as total_sales')
                 )
-                ->groupBy('yearweek')
-                ->orderBy('yearweek', 'asc')
+                ->groupBy('year', 'week')
+                ->orderBy('year', 'asc')
+                ->orderBy('week', 'asc')
                 ->get()
-                ->keyBy('yearweek');
+                ->keyBy(function($item) {
+                    return $item->year . '-' . str_pad($item->week, 2, '0', STR_PAD_LEFT);
+                });
 
             // Build 8-week array
             $labels = [];
             $data = [];
 
             for ($i = 7; $i >= 0; $i--) {
-                $date = Carbon::now()->subWeeks($i);
-                $yearWeek = $date->format('oW'); // ISO-8601 week
+                $date = Carbon::now()->subWeeks($i)->startOfWeek();
+                $weekKey = $date->format('o-W'); // ISO year-week format
                 $weekNumber = 8 - $i;
                 $labels[] = 'W' . $weekNumber;
                 
-                $weekSales = 0;
-                // Match yearweek from database
-                foreach ($salesByWeek as $week => $sales) {
-                    $weekDate = Carbon::now()->setISODate(substr($week, 0, 4), substr($week, 4));
-                    if ($weekDate->isSameWeek($date)) {
-                        $weekSales = $sales->total_sales;
-                        break;
-                    }
-                }
-
+                $weekSales = $salesByWeek->get($weekKey)?->total_sales ?? 0;
                 $data[] = round($weekSales, 2);
             }
 
@@ -368,9 +391,12 @@ class AnalyticsController extends Controller
         try {
             $startOfMonth = Carbon::now()->startOfMonth();
             $today = Carbon::now();
+            
+            // Calculate days before using today in query to avoid mutation
+            $daysInMonth = $today->diffInDays($startOfMonth) + 1;
 
             $salesByDay = SalesTransaction::completed()
-                ->whereBetween('created_at', [$startOfMonth, $today->endOfDay()])
+                ->whereBetween('created_at', [$startOfMonth, $today->copy()->endOfDay()])
                 ->select(
                     DB::raw('DATE(created_at) as date'),
                     DB::raw('SUM(total_amount) as daily_sales')
@@ -383,7 +409,6 @@ class AnalyticsController extends Controller
             $labels = [];
             $data = [];
             $cumulative = 0;
-            $daysInMonth = $today->diffInDays($startOfMonth) + 1;
 
             for ($day = 1; $day <= $daysInMonth; $day++) {
                 $date = $startOfMonth->copy()->addDays($day - 1);

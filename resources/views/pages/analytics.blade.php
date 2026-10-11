@@ -19,8 +19,11 @@
         <h1 class="text-[26px] font-black text-gray-900">Analytics Dashboard</h1>
         <p class="text-[13.5px] text-gray-500 mt-0.5">Deep-dive analytics and business performance metrics</p>
     </div>
-    <select class="inp" style="width:auto;padding:10px 18px;border-radius:14px">
-        <option>Last 30 Days</option><option>Last 90 Days</option><option>Last 6 Months</option><option>Last Year</option>
+    <select x-model="dateRange" @change="reloadData()" class="inp" style="width:auto;padding:10px 18px;border-radius:14px">
+        <option value="30">Last 30 Days</option>
+        <option value="90">Last 90 Days</option>
+        <option value="180">Last 6 Months</option>
+        <option value="365">Last Year</option>
     </select>
 </div>
 
@@ -31,9 +34,11 @@
         <div class="icon-ring mb-3">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </div>
-        <p class="text-[22px] font-black text-gray-900" x-text="kpis ? '₱' + formatNum(kpis.total_revenue) : '—'">—</p>
+        <p class="text-[22px] font-black text-gray-900" x-text="kpis ? '₱' + formatNum(kpis.total_revenue) : '₱0'">₱0</p>
         <p class="text-[12px] text-gray-500 font-medium mt-0.5">Revenue</p>
-        <span class="badge badge-green text-[10.5px] mt-1.5" x-text="kpis ? '↑ ' + kpis.revenue_change_pct + '%' : '—'">—</span>
+        <span class="badge text-[10.5px] mt-1.5" 
+              :class="kpis && kpis.revenue_change_pct >= 0 ? 'badge-green' : 'badge-red'"
+              x-text="kpis ? (kpis.revenue_change_pct >= 0 ? '↑ ' : '↓ ') + Math.abs(kpis.revenue_change_pct).toFixed(1) + '%' : '—'">—</span>
     </div>
     
     {{-- Profit --}}
@@ -41,9 +46,11 @@
         <div class="icon-ring mb-3">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         </div>
-        <p class="text-[22px] font-black text-gray-900" x-text="kpis ? '₱' + formatNum(kpis.gross_profit) : '—'">—</p>
+        <p class="text-[22px] font-black text-gray-900" x-text="kpis ? '₱' + formatNum(kpis.gross_profit) : '₱0'">₱0</p>
         <p class="text-[12px] text-gray-500 font-medium mt-0.5">Profit</p>
-        <span class="badge badge-green text-[10.5px] mt-1.5" x-text="kpis ? '↑ ' + kpis.profit_change_pct + '%' : '—'">—</span>
+        <span class="badge text-[10.5px] mt-1.5"
+              :class="kpis && kpis.profit_change_pct >= 0 ? 'badge-green' : 'badge-red'"
+              x-text="kpis ? (kpis.profit_change_pct >= 0 ? '↑ ' : '↓ ') + Math.abs(kpis.profit_change_pct).toFixed(1) + '%' : '—'">—</span>
     </div>
     
     {{-- Sales Volume --}}
@@ -51,9 +58,11 @@
         <div class="icon-ring mb-3">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
         </div>
-        <p class="text-[22px] font-black text-gray-900" x-text="kpis ? formatNum(kpis.sales_volume) + ' kg' : '—'">—</p>
+        <p class="text-[22px] font-black text-gray-900" x-text="kpis ? formatNum(kpis.sales_volume) + ' kg' : '0 kg'">0 kg</p>
         <p class="text-[12px] text-gray-500 font-medium mt-0.5">Sales Volume</p>
-        <span class="badge badge-green text-[10.5px] mt-1.5">↑ 11.2%</span>
+        <span class="badge text-[10.5px] mt-1.5"
+              :class="kpis && kpis.volume_change_pct >= 0 ? 'badge-green' : 'badge-red'"
+              x-text="kpis && kpis.volume_change_pct ? (kpis.volume_change_pct >= 0 ? '↑ ' : '↓ ') + Math.abs(kpis.volume_change_pct).toFixed(1) + '%' : '—'">—</span>
     </div>
     
     {{-- Waste Reduced --}}
@@ -63,7 +72,9 @@
         </div>
         <p class="text-[22px] font-black text-gray-900" x-text="kpis ? kpis.waste_reduced_pct + '%' : '—'">—</p>
         <p class="text-[12px] text-gray-500 font-medium mt-0.5">Waste Reduced</p>
-        <span class="badge badge-green text-[10.5px] mt-1.5">↑ 23.4%</span>
+        <span class="badge text-[10.5px] mt-1.5"
+              :class="kpis && kpis.waste_change_pct >= 0 ? 'badge-green' : 'badge-red'"
+              x-text="kpis && kpis.waste_change_pct !== undefined ? (kpis.waste_change_pct >= 0 ? '↑ ' : '↓ ') + Math.abs(kpis.waste_change_pct).toFixed(1) + '%' : '—'">—</span>
     </div>
     
     {{-- Forecast Accuracy --}}
@@ -73,7 +84,9 @@
         </div>
         <p class="text-[22px] font-black text-gray-900" x-text="kpis ? kpis.forecast_accuracy + '%' : '—'">—</p>
         <p class="text-[12px] text-gray-500 font-medium mt-0.5">Forecast Acc.</p>
-        <span class="badge badge-green text-[10.5px] mt-1.5">↑ 1.2%</span>
+        <span class="badge text-[10.5px] mt-1.5"
+              :class="kpis && kpis.forecast_change_pct >= 0 ? 'badge-green' : 'badge-red'"
+              x-text="kpis && kpis.forecast_change_pct !== undefined ? (kpis.forecast_change_pct >= 0 ? '↑ ' : '↓ ') + Math.abs(kpis.forecast_change_pct).toFixed(1) + '%' : '—'">—</span>
     </div>
 </div>
 
@@ -164,6 +177,7 @@
 function analyticsController() {
     return {
         loading: true,
+        dateRange: 30,
         kpis: null,
         salesByFruit: [],
         charts: {},
@@ -176,15 +190,20 @@ function analyticsController() {
         },
         
         async init() {
+            await this.reloadData();
+        },
+        
+        async reloadData() {
+            this.loading = true;
             try {
                 const [kpis, trend, fruit, weekly, cumul, waste, stacked] = await Promise.all([
-                    fetch('/api/analytics/kpis').then(r=>r.json()),
-                    fetch('/api/analytics/revenue-trend').then(r=>r.json()),
-                    fetch('/api/analytics/sales-by-fruit').then(r=>r.json()),
-                    fetch('/api/analytics/weekly-sales').then(r=>r.json()),
-                    fetch('/api/analytics/cumulative-revenue').then(r=>r.json()),
-                    fetch('/api/analytics/waste-reduction').then(r=>r.json()),
-                    fetch('/api/analytics/stacked-sales').then(r=>r.json()),
+                    fetch(`/api/analytics/kpis?days=${this.dateRange}`).then(r=>r.json()),
+                    fetch(`/api/analytics/revenue-trend?days=${this.dateRange}`).then(r=>r.json()),
+                    fetch(`/api/analytics/sales-by-fruit?days=${this.dateRange}`).then(r=>r.json()),
+                    fetch(`/api/analytics/weekly-sales?weeks=8`).then(r=>r.json()),
+                    fetch(`/api/analytics/cumulative-revenue?days=${this.dateRange}`).then(r=>r.json()),
+                    fetch(`/api/analytics/waste-reduction?months=6`).then(r=>r.json()),
+                    fetch(`/api/analytics/stacked-sales?months=6`).then(r=>r.json()),
                 ]);
                 this.kpis = kpis;
                 this.salesByFruit = fruit;

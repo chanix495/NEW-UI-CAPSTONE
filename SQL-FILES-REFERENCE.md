@@ -1,140 +1,247 @@
-# SQL Files Reference - FreshTrack
+# 📚 SQL Files Reference - FreshTrack Database Setup
 
-## ✅ ALL FILES NOW UPDATED WITH WORKING PASSWORD HASH
+## 🎯 **USE THIS FILE FOR COMPLETE SETUP:**
 
-All SQL files have been updated with the correct password hash that works with Laravel.
+### **`FRESHTRACK-COMPLETE-DATA.sql`** ⭐ **RECOMMENDED**
+**The ONE file you need!**
 
-Password for all accounts: **password**
+**Contains:**
+- ✅ User accounts (owner, manager, cashier)
+- ✅ Products catalog (11 items)
+- ✅ Inventory batches (15 batches with expiry dates)
+- ✅ Sales transactions (7 sample transactions)
+- ✅ Transaction line items (all details)
+- ✅ Proper data relationships
 
----
+**When to use:** 
+- ✅ Fresh installation
+- ✅ Your teammate clones the project
+- ✅ You want to reset everything
+- ✅ Quick demo setup
 
-## 📁 SQL Files Available
-
-### 1. COMPLETE-SETUP.sql ⭐ (RECOMMENDED)
-**Use this for:** Complete fresh setup
-
-**What it does:**
-- Adds role column to users table
-- Removes old demo accounts
-- Creates 3 new accounts (owner, manager, cashier)
-- Verifies everything is ready
-
-**When to use:**
-- First time setup
-- Complete reset of demo accounts
-- Clean installation
-
----
-
-### 2. create_demo_users.sql
-**Use this for:** Creating demo accounts from scratch
-
-**What it does:**
-- Same as COMPLETE-SETUP.sql
-- Adds role column
-- Creates all 3 accounts
-
-**When to use:**
-- Initial setup
-- When you want to recreate all accounts
-
----
-
-### 3. INSTANT-FIX.sql
-**Use this for:** Quick password fix only
-
-**What it does:**
-- ONLY updates passwords for existing accounts
-- Does NOT create accounts
-- Does NOT add role column
-
-**When to use:**
-- Accounts already exist but passwords don't work
-- Quick fix when login fails
-- After importing database
-
----
-
-### 4. FIX-PASSWORDS-NOW.sql
-**Use this for:** Emergency password fix
-
-**What it does:**
-- Same as INSTANT-FIX.sql
-- Updates passwords for all 3 accounts
-
-**When to use:**
-- Emergency fix when you can't login
-- Quick password reset
-
----
-
-## 🎯 Which File Should You Use?
-
-### Scenario 1: Fresh Setup
-Use: **COMPLETE-SETUP.sql**
-
-### Scenario 2: Can't Login (accounts exist)
-Use: **INSTANT-FIX.sql** or **FIX-PASSWORDS-NOW.sql**
-
-### Scenario 3: Starting Over
-Use: **COMPLETE-SETUP.sql**
-
-### Scenario 4: Need to Share with Team
-Use: **COMPLETE-SETUP.sql** (it has everything)
-
----
-
-## 📋 How to Use Any SQL File
-
+**How to use:**
 1. Open phpMyAdmin
 2. Select database: `capstone_db`
-3. Click "SQL" tab
-4. Open the SQL file you need
-5. Copy ALL the SQL
-6. Paste in phpMyAdmin
-7. Click "Go"
+3. Go to SQL tab
+4. Copy and paste entire file
+5. Click "Go"
+6. Done! (takes ~2 seconds)
 
 ---
 
-## 🔑 Demo Account Credentials
+## 📁 Other SQL Files (Legacy - Not Needed Anymore)
 
-All accounts use the same password for testing:
+### `COMPLETE-SETUP.sql`
+**Old file - Only users**
+- Contains: User accounts only
+- Missing: Products, sales, inventory
 
-| Email | Password | Role | Access Level |
-|-------|----------|------|--------------|
-| owner@FreshTrack.ph | password | Owner | Full access to everything |
-| manager@FreshTrack.ph | password | Manager | POS, Sales, Inventory, Reports, Forecast, Spoilage, Analytics |
-| cashier@FreshTrack.ph | password | Cashier | POS, Notifications, Settings only |
+### `INSERT-SAMPLE-DATA.sql`
+**Old file - Only products**
+- Contains: Products and batches only
+- Missing: Users, sales transactions
+
+### `create_demo_users.sql`
+**Old file - Only users**
+- Contains: 3 user accounts
+- Missing: Everything else
+
+### `capstone_db_structure.sql`
+**Structure only - No data**
+- Contains: Table definitions
+- Missing: All data
+
+### `database_backup.sql`
+**Old backup - May be outdated**
+- Use `FRESHTRACK-COMPLETE-DATA.sql` instead
 
 ---
 
-## ✅ What's Fixed
+## 🚀 Quick Start Instructions
 
-All SQL files now use the correct password hash:
-```
-$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi
-```
-
-This is Laravel's standard test password hash that's guaranteed to work with the password "password".
-
-The old hash that didn't work:
-```
-$2y$12$LQv3c1yycwMV2SdFxq8oRuSQqhbZ8ggQPJ0xOvAz8cVKZJmZz0RJu
-```
-
----
-
-## 🚀 Quick Start
-
-For easiest setup, just run:
+**For you:**
 ```sql
-COMPLETE-SETUP.sql
+-- Already have the database? Just use FRESHTRACK-COMPLETE-DATA.sql
 ```
 
-Then login with:
-- Email: owner@FreshTrack.ph
-- Password: password
+**For your teammate:**
+1. Clone project
+2. Run `composer install`
+3. Run `npm install`
+4. Copy `.env.example` to `.env`
+5. Create database `capstone_db`
+6. Import **`FRESHTRACK-COMPLETE-DATA.sql`** ⭐
+7. Run `php artisan serve`
+8. Login: owner@FreshTrack.ph / password
+
+**That's it!** Everything works.
 
 ---
 
-**All files are now ready to use!** 🎉
+## 📊 What's Included in FRESHTRACK-COMPLETE-DATA.sql
+
+### 👥 User Accounts (3)
+| Email | Password | Role | Access |
+|-------|----------|------|--------|
+| owner@FreshTrack.ph | password | Owner | Full |
+| manager@FreshTrack.ph | password | Manager | Inventory + Sales |
+| cashier@FreshTrack.ph | password | Cashier | POS Only |
+
+### 🍎 Products (11)
+- Mango (220 kg)
+- Durian (45 kg)
+- Pomelo (508 kg)
+- Mangosteen (92 kg)
+- Lanzones (22 kg)
+- Pineapple (118 kg)
+- Banana (210 kg)
+- Avocado (35 kg)
+- Coconut (150 pc)
+- BEEG (589 kg)
+- Dragon Fruit (250 kg)
+
+### 📦 Inventory Batches (15)
+- All with realistic expiry dates
+- FIFO ordering (earliest expiry first)
+- Different suppliers
+- Batch codes (e.g., MNG-001, DUR-112)
+
+### 💰 Sales Transactions (7)
+- Today's sales (3 transactions)
+- Yesterday's sales (2 transactions)
+- Last week's sales (2 transactions)
+- Different payment methods (cash, gcash, card)
+- Multiple items per transaction
+- **Sorted newest first** ✅
+
+### 🛒 Transaction Details
+- Line-by-line breakdown
+- Quantity, price, subtotal per item
+- Proper batch tracking
+- FIFO compliance
+
+---
+
+## ✅ Features Already Working
+
+After importing `FRESHTRACK-COMPLETE-DATA.sql`:
+
+### Dashboard
+- ✅ Today's revenue metrics
+- ✅ Low stock alerts
+- ✅ Expiring items
+- ✅ Sales trends
+
+### Inventory
+- ✅ Product quantities accurate
+- ✅ Stock In/Out working
+- ✅ Adjustments tracked
+- ✅ Records auto-refresh
+
+### Sales
+- ✅ Transactions sorted (newest first)
+- ✅ Unit prices display correctly
+- ✅ "New Transaction" button functional
+- ✅ Products show available quantities
+- ✅ Price editing enabled
+- ✅ Auto-refresh after sale
+
+### POS
+- ✅ Products load with correct stock
+- ✅ FIFO batches
+- ✅ Real-time validation
+- ✅ Multiple payment methods
+
+---
+
+## 🔄 Reset Database
+
+If you need to start over:
+
+```sql
+-- Option 1: Quick reset
+DROP DATABASE capstone_db;
+CREATE DATABASE capstone_db;
+-- Then import FRESHTRACK-COMPLETE-DATA.sql
+
+-- Option 2: Keep structure, clear data
+TRUNCATE TABLE sales_items;
+TRUNCATE TABLE sales_transactions;
+TRUNCATE TABLE inventory_batches;
+TRUNCATE TABLE inventory_items;
+DELETE FROM users WHERE email LIKE '%FreshTrack.ph';
+-- Then import FRESHTRACK-COMPLETE-DATA.sql
+```
+
+---
+
+## 📝 Notes
+
+### Why One File Instead of Multiple?
+
+**Before (Confusing):**
+1. Import `COMPLETE-SETUP.sql` (users)
+2. Import `INSERT-SAMPLE-DATA.sql` (products)
+3. Manually create sales data
+4. Hope everything links correctly
+
+**Now (Simple):**
+1. Import `FRESHTRACK-COMPLETE-DATA.sql`
+2. Done!
+
+**Benefits:**
+- ✅ No confusion about which files to run
+- ✅ No order dependency
+- ✅ No missing relationships
+- ✅ Everything works immediately
+- ✅ Perfect for teammates
+- ✅ Perfect for demos
+
+### Data Consistency
+
+`FRESHTRACK-COMPLETE-DATA.sql` ensures:
+- ✅ All foreign keys valid
+- ✅ Quantities match between tables
+- ✅ User IDs exist
+- ✅ Batch IDs exist
+- ✅ Product IDs exist
+- ✅ Timestamps consistent
+
+---
+
+## 🆘 Troubleshooting
+
+### "Foreign key constraint fails"
+**Solution:** You're using old SQL files. Use `FRESHTRACK-COMPLETE-DATA.sql` instead.
+
+### "Duplicate entry"
+**Solution:** Clear tables first or drop/recreate database.
+
+### "Products showing 0 kg"
+**Solution:** 
+1. Make sure you imported `FRESHTRACK-COMPLETE-DATA.sql` completely
+2. Clear cache: `php artisan view:clear`
+3. Hard refresh: Ctrl+F5
+
+### "Latest sale not at top"
+**Solution:** Already fixed in `FRESHTRACK-COMPLETE-DATA.sql`! Transactions are ordered by `created_at DESC`.
+
+---
+
+## 📞 For Your Teammate
+
+**Tell them:**
+
+> "Just import `FRESHTRACK-COMPLETE-DATA.sql` in phpMyAdmin and everything will work. 
+> It's the only file you need. All other SQL files are old/outdated.
+> 
+> Login: owner@FreshTrack.ph / password
+> 
+> See `QUICK-START-GUIDE.md` for step-by-step instructions."
+
+---
+
+**Last Updated:** October 2, 2026  
+**Current File:** `FRESHTRACK-COMPLETE-DATA.sql`  
+**Status:** Production Ready ✅  
+**Version:** 1.0.0
