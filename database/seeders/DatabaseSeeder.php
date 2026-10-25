@@ -15,31 +15,22 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create Owner account
-        User::create([
-            'name' => 'Owner Account',
-            'email' => 'owner@FreshTrack.ph',
-            'password' => bcrypt('password'),
-            'role' => 'owner',
-            'email_verified_at' => now(),
-        ]);
+        $accounts = [
+            ['name' => 'Owner Account', 'email' => 'owner@FreshTrack.ph', 'role' => 'owner'],
+            ['name' => 'Manager Account', 'email' => 'manager@FreshTrack.ph', 'role' => 'manager'],
+            ['name' => 'Cashier Account', 'email' => 'cashier@FreshTrack.ph', 'role' => 'cashier'],
+        ];
 
-        // Create Manager account
-        User::create([
-            'name' => 'Manager Account',
-            'email' => 'manager@FreshTrack.ph',
-            'password' => bcrypt('password'),
-            'role' => 'manager',
-            'email_verified_at' => now(),
-        ]);
-
-        // Create Cashier account
-        User::create([
-            'name' => 'Cashier Account',
-            'email' => 'cashier@FreshTrack.ph',
-            'password' => bcrypt('password'),
-            'role' => 'cashier',
-            'email_verified_at' => now(),
-        ]);
+        foreach ($accounts as $account) {
+            User::updateOrCreate(
+                ['email' => $account['email']],
+                [
+                    'name' => $account['name'],
+                    'password' => 'password',
+                    'role' => $account['role'],
+                    'email_verified_at' => now(),
+                ]
+            );
+        }
     }
 }

@@ -13,7 +13,10 @@
         h1,h2,h3{font-family:'Poppins',sans-serif}
         [x-cloak]{display:none!important}
         .g-violet{background:linear-gradient(135deg,#7C3AED,#6D28D9)}
-        .g-hero{background:linear-gradient(160deg,#7C3AED 0%,#6D28D9 50%,#059669 100%)}
+        .g-hero{background:linear-gradient(160deg,#7C3AED 0%,#6D28D9 55%,#4C1D95 100%)!important}
+        .hero-accent{color:#DDD6FE!important}
+        .hero-dot{background:#C4B5FD!important}
+        .hero-orb{background:rgba(167,139,250,.28)!important}
         .float-a{animation:fa 7s ease-in-out infinite}
         .float-b{animation:fb 9s ease-in-out infinite}
         .float-c{animation:fc 8s ease-in-out infinite}
@@ -52,7 +55,7 @@
         <div class="absolute inset-0 opacity-10" style="background-image:radial-gradient(circle,rgba(255,255,255,.7) 1px,transparent 1px);background-size:36px 36px"></div>
         
         {{-- Floating orbs --}}
-        <div class="absolute top-20 left-20 w-72 h-72 bg-green-400/20 rounded-full blur-3xl float-a"></div>
+        <div class="absolute top-20 left-20 w-72 h-72 hero-orb rounded-full blur-3xl float-a"></div>
         <div class="absolute bottom-20 right-20 w-96 h-96 bg-violet-400/20 rounded-full blur-3xl float-b"></div>
         <div class="absolute top-1/2 left-1/3 w-64 h-64 bg-white/10 rounded-full blur-2xl float-c"></div>
 
@@ -74,7 +77,7 @@
         {{-- Hero content --}}
         <div class="relative z-10 fade-up" style="animation-delay:.2s">
             <h1 class="text-5xl font-black text-white leading-tight mb-5">
-                The Smartest Way<br>to Manage Your<br><span class="text-green-300 shimmer">Fruit Business</span>
+                The Smartest Way<br>to Manage Your<br><span class="hero-accent shimmer">Fruit Business</span>
             </h1>
             <p class="text-white/80 text-base leading-relaxed mb-10 max-w-md">AI-powered sales forecasting, real-time spoilage prediction, and intelligent inventory management — built for Davao City fruit vendors.</p>
 
@@ -91,7 +94,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icon }}"/>
                         </svg>
                     </div>
-                    <p class="text-green-300 font-black text-2xl mb-1">{{ $v }}</p>
+                    <p class="hero-accent font-black text-2xl mb-1">{{ $v }}</p>
                     <p class="text-white/70 text-xs font-semibold">{{ $l }}</p>
                 </div>
                 @endforeach
@@ -119,7 +122,7 @@
         {{-- Footer --}}
         <div class="relative z-10 fade-up" style="animation-delay:.6s">
             <div class="flex items-center gap-2">
-                <span class="w-2 h-2 bg-green-400 rounded-full pulse-dot"></span>
+                <span class="w-2 h-2 hero-dot rounded-full pulse-dot"></span>
                 <span class="text-white/70 text-xs font-semibold">System Online · Davao City · 2026</span>
             </div>
         </div>
@@ -148,17 +151,17 @@
             </div>
 
             {{-- Login Form --}}
-            <form method="POST" action="{{ route('login.post') }}" x-data="{ showPass: false, loading: false, activeRole: 0 }" @submit="loading=true">
+            <form method="POST" action="{{ route('login.post') }}" x-data="{ showPass: false, loading: false, activeRole: 0, email: '{{ old('email', 'owner@FreshTrack.ph') }}' }" @submit="loading=true">
                 @csrf
 
-                {{-- Role selector (for display only, doesn't affect login) --}}
+                {{-- Role selector fills the matching demo email --}}
                 <div class="grid grid-cols-3 gap-3 mb-8 p-1.5 bg-gray-100 rounded-2xl">
                     @foreach([
-                        ['Owner', 'M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
-                        ['Manager', 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
-                        ['Cashier', 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z']
-                    ] as $i => [$role, $icon])
-                    <button type="button" @click="activeRole={{ $i }}" 
+                        ['Owner', 'owner@FreshTrack.ph', 'M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                        ['Manager', 'manager@FreshTrack.ph', 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
+                        ['Cashier', 'cashier@FreshTrack.ph', 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z']
+                    ] as $i => [$role, $email, $icon])
+                    <button type="button" @click="activeRole={{ $i }}; email='{{ $email }}'" 
                             :class="activeRole==={{ $i }} ? 'bg-white shadow-lg text-violet-700 font-bold scale-105 role-active' : 'text-gray-600 hover:text-gray-900'"
                             class="role-btn flex flex-col items-center gap-2 py-3.5 rounded-xl text-xs font-semibold transition-all">
                         <div :class="activeRole==={{ $i }} ? 'bg-violet-100' : 'bg-gray-200'" class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors">
@@ -192,7 +195,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                             </svg>
                         </span>
-                        <input type="email" name="email" value="{{ old('email', 'owner@FreshTrack.ph') }}" placeholder="your@email.com" required class="inp">
+                        <input type="email" name="email" x-model="email" placeholder="your@email.com" required class="inp">
                     </div>
                 </div>
 
@@ -244,7 +247,7 @@
             </form>
 
             {{-- Demo credentials --}}
-            <div class="bg-gradient-to-br from-violet-50 via-purple-50 to-green-50 rounded-2xl p-5 border-2 border-violet-100 shadow-lg">
+            <div class="bg-gradient-to-br from-violet-50 via-purple-50 to-violet-50 rounded-2xl p-5 border-2 border-violet-100 shadow-lg">
                 <div class="flex items-center gap-2.5 mb-4">
                     <svg class="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
@@ -256,7 +259,7 @@
                     @foreach([
                         ['Owner', 'owner@FreshTrack.ph', 'Full access', 'M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z', 'text-violet-600', 'bg-violet-100'],
                         ['Manager', 'manager@FreshTrack.ph', 'Limited', 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', 'text-blue-600', 'bg-blue-100'],
-                        ['Cashier', 'cashier@FreshTrack.ph', 'Sales only', 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z', 'text-green-600', 'bg-green-100']
+                        ['Cashier', 'cashier@FreshTrack.ph', 'Sales only', 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z', 'text-violet-600', 'bg-violet-100']
                     ] as [$r, $e, $a, $icon, $color, $bg])
                     <div class="bg-white rounded-xl p-3 border border-violet-200 text-center hover:shadow-md transition-shadow">
                         <div class="w-10 h-10 {{ $bg }} rounded-xl flex items-center justify-center mx-auto mb-2">
