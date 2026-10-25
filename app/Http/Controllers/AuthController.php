@@ -57,7 +57,10 @@ class AuthController extends Controller
             \Log::error('User not found', ['email' => $credentials['email']]);
         }
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        // Archived or inactive users cannot sign in
+        $attempt = $credentials + ['status' => 'active', 'archived_at' => null];
+
+        if (Auth::attempt($attempt, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
             $user = Auth::user();

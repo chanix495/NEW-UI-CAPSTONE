@@ -77,7 +77,7 @@ Route::middleware(['auth'])->group(function () {
     // Owner only routes
     Route::middleware(['role:owner'])->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
-        Route::get('/users', fn() => view('pages.users'))->name('users');
+        Route::get('/users', [\App\Http\Controllers\UserController::class, 'page'])->name('users');
         Route::get('/decision-support', fn() => view('pages.decision-support'))->name('decision-support');
     });
     
@@ -146,6 +146,12 @@ Route::prefix('api')->middleware(['auth'])->group(function () {
     
     // Owner only routes
     Route::middleware(['role:owner'])->group(function () {
+        // User Management API
+        Route::post('/users', [\App\Http\Controllers\UserController::class, 'store'])->name('api.users.store');
+        Route::put('/users/{user}', [\App\Http\Controllers\UserController::class, 'update'])->name('api.users.update');
+        Route::post('/users/{user}/archive', [\App\Http\Controllers\UserController::class, 'archive'])->name('api.users.archive');
+        Route::post('/users/{user}/restore', [\App\Http\Controllers\UserController::class, 'restore'])->name('api.users.restore');
+
         // Dashboard API
         Route::get('/dashboard/metrics', [\App\Http\Controllers\DashboardController::class, 'getDashboardMetrics'])->name('api.dashboard.metrics');
         Route::get('/dashboard/sales-trend', [\App\Http\Controllers\DashboardController::class, 'getSalesTrend'])->name('api.dashboard.sales-trend');
@@ -160,4 +166,9 @@ Route::prefix('api')->middleware(['auth'])->group(function () {
     Route::post('/notifications/generate', [\App\Http\Controllers\NotificationsController::class, 'generateNotifications'])->name('api.notifications.generate');
     Route::get('/notifications/count', [\App\Http\Controllers\NotificationsController::class, 'getCount'])->name('api.notifications.count');
     Route::get('/notifications/unread-count', [\App\Http\Controllers\NotificationsController::class, 'getUnreadCount'])->name('api.notifications.unread-count');
+    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationsController::class, 'markAllRead'])->name('api.notifications.read-all');
+    Route::post('/notifications/dismiss-all', [\App\Http\Controllers\NotificationsController::class, 'dismissAll'])->name('api.notifications.dismiss-all');
+    Route::post('/notifications/restore', [\App\Http\Controllers\NotificationsController::class, 'restoreAll'])->name('api.notifications.restore');
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationsController::class, 'markRead'])->name('api.notifications.read');
+    Route::post('/notifications/{id}/dismiss', [\App\Http\Controllers\NotificationsController::class, 'dismiss'])->name('api.notifications.dismiss');
 });

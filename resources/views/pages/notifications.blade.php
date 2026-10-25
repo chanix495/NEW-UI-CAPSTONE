@@ -1,7 +1,7 @@
 ﻿<x-app-layout>
 <x-slot name="title">Notifications — FreshTrack</x-slot>
 
-<div x-data="notifCenter()" x-init="init()">
+<div x-data="notifCenter(@js(['filter' => $filter, 'sort' => $sort, 'q' => $search]))" x-init="init()">
 
 {{-- HEADER MATCHING DASHBOARD STYLE --}}
 <div class="mb-6 fade-up">
@@ -32,11 +32,11 @@
 <div class="grid grid-cols-5 gap-4 mb-6 fade-up delay-1">
     @php
     $stats = [
-        ['16', 'Total Notifications', 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'],
-        ['5',  'Critical', 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'],
-        ['4',  'High Priority', 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
-        ['7',  'Unread', 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
-        ['10', 'Today', 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+        [$counts['total'], 'Total Notifications', 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'],
+        [$counts['critical'],  'Critical', 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'],
+        [$counts['high'],  'High Priority', 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
+        [$counts['unread'],  'Unread', 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
+        [$counts['today'], 'Today', 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
     ];
     @endphp
     @foreach($stats as [$count, $label, $icon])
@@ -59,16 +59,16 @@
     <div class="flex items-center gap-2">
         @php
         $tabs = [
-            ['all', 'All', '16'],
-            ['forecast', 'Forecast', '4'],
-            ['spoilage', 'Spoilage', '3'],
-            ['weather', 'Weather', '2'],
-            ['inventory', 'Inventory', '4'],
-            ['sales', 'Sales', '3'],
+            ['all', 'All', $counts['total']],
+            ['forecast', 'Forecast', $moduleCounts['forecast'] ?? 0],
+            ['spoilage', 'Spoilage', $moduleCounts['spoilage'] ?? 0],
+            ['weather', 'Weather', $moduleCounts['weather'] ?? 0],
+            ['inventory', 'Inventory', $moduleCounts['inventory'] ?? 0],
+            ['sales', 'Sales', $moduleCounts['sales'] ?? 0],
         ];
         @endphp
         @foreach($tabs as [$key, $label, $count])
-        <button @click="activeFilter = '{{ $key }}'"
+        <button @click="setFilter('{{ $key }}')"
                 :class="activeFilter === '{{ $key }}' ? 'btn-violet text-white' : 'btn-outline text-gray-600'"
                 class="btn btn-sm px-4">
             {{ $label }} <span class="opacity-60">({{ $count }})</span>
@@ -79,8 +79,9 @@
     <div class="flex items-center gap-3">
         <div class="relative">
             <input type="text" 
+                   x-ref="search"
                    x-model="searchQuery"
-                   @input="filterNotifications()"
+                   @input.debounce.500ms="filterNotifications()"
                    placeholder="Search notifications..."
                    class="inp text-[13px] py-2 pl-10 pr-4 w-64">
             <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -98,46 +99,35 @@
 
 {{-- NOTIFICATION CARDS MATCHING DASHBOARD CARD STYLE --}}
 <div class="space-y-4 fade-up delay-3">
-@php
-$notifications = [
-    ['forecast', 'CRITICAL', '2 min', false, 'Demand Exceeds Available Stock', 'SARIMAX Forecast Alert', 'Mango demand forecasted at 145 kg/day for the weekend, but current stock is only 120 kg. Predicted stockout in 20 hours.', 'Restock Now', 'inventory'],
-    ['forecast', 'INFO', '15 min', false, 'Forecast Updated Successfully', 'Weekly SARIMAX Forecast', 'New 7-day sales forecast generated. Mango demand expected to rise 38% this weekend. Pineapple demand 20% below average.', 'View Forecast', 'forecast'],
-    ['spoilage', 'CRITICAL', '8 min', false, 'Critical Spoilage Warning', 'XGBoost AI Prediction', 'Mango batch MNG-002: 78% spoilage probability within 24 hours. 155 kg at risk. Potential loss: ₱18,290.', 'View Details', 'spoilage'],
-    ['spoilage', 'HIGH', '32 min', false, 'High Spoilage Probability', 'XGBoost Durian Alert', 'Durian batch DUR-112 shows 65% spoilage risk. Environmental sensors detect temp 28°C, humidity 75%. 92 kg affected.', 'Monitor Batch', 'spoilage'],
-    ['weather', 'HIGH', '45 min', false, 'High Humidity Warning', 'Weather API Alert', 'Philippine Atmospheric Agency reports 78% humidity for next 48 hours. Enhanced monitoring recommended for Durian and Mangosteen.', 'View Weather', 'dashboard'],
-    ['inventory', 'CRITICAL', '5 min', false, 'Critical Low Stock', 'Inventory System Alert', 'Pomelo stock critically low: 8 kg remaining. Daily demand: 20 kg. Stock depletes in 12 hours. Order 50 kg immediately.', 'Restock Now', 'inventory'],
-    ['inventory', 'MEDIUM', '1.5 hrs', true, 'Low Stock Warning', 'Replenishment Needed', 'Mangosteen inventory at 14 kg (35% of required level). Reorder threshold reached. Place order for 40 kg.', 'View Inventory', 'inventory'],
-    ['sales', 'INFO', '3.5 hrs', true, 'Sales Milestone Achieved', 'Daily Sales Target', "Today's sales reached ₱18,000 target at 2:30 PM — 3.5 hours ahead of schedule. Excellent performance!", 'View Sales', 'sales'],
-];
-@endphp
 
-@foreach($notifications as $i => $n)
-<div x-show="activeFilter === 'all' || activeFilter === '{{ $n[0] }}'"
+
+@foreach($notifications as $n)
+<div x-show="activeFilter === 'all' || activeFilter === '{{ strtolower($n->module) }}'"
      x-transition
      class="card shimmer card-lift"
-     :class="dismissed.includes({{ $i }}) ? 'hidden' : ''">
+     :class="dismissed.includes({{ $n->id }}) ? 'hidden' : ''">
     <div class="p-5">
         <div class="flex items-start justify-between mb-4">
             <div class="flex items-center gap-3">
                 <span class="badge badge-violet text-[10px] uppercase tracking-wide font-bold">
-                    {{ $n[1] }}
+                    {{ $n->severity }}
                 </span>
-                @if(!$n[3])
+                @if(!$n->is_read)
                 <span class="flex items-center gap-1.5">
                     <span class="w-2 h-2 bg-violet-600 rounded-full pulse-dot"></span>
                     <span class="text-[10px] font-bold text-violet-600">NEW</span>
                 </span>
                 @endif
-                <span class="text-[11px] text-gray-400 font-medium">{{ $n[5] }}</span>
+                <span class="text-[11px] text-gray-400 font-medium">{{ $n->subtitle }}</span>
             </div>
             <div class="flex items-center gap-3">
                 <span class="text-[12px] text-gray-400 font-medium flex items-center gap-1.5">
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    {{ $n[2] }} ago
+                    {{ $n->created_at->diffForHumans(null, \Carbon\CarbonInterface::DIFF_ABSOLUTE) }} ago
                 </span>
-                <button @click.stop="dismissed.push({{ $i }})" 
+                <button @click.stop="dismiss({{ $n->id }})" 
                         class="text-gray-300 hover:text-red-500 transition-colors">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -146,23 +136,23 @@ $notifications = [
             </div>
         </div>
 
-        <h3 class="text-[17px] font-black text-gray-900 mb-2">{{ $n[4] }}</h3>
-        <p class="text-[14px] text-gray-600 leading-relaxed mb-4">{{ $n[6] }}</p>
+        <h3 class="text-[17px] font-black text-gray-900 mb-2">{{ $n->title }}</h3>
+        <p class="text-[14px] text-gray-600 leading-relaxed mb-4">{{ $n->message }}</p>
 
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <a href="{{ route($n[8]) }}" class="btn btn-violet btn-sm">
-                    {{ $n[7] }}
+                <a href="{{ url($n->action_link ?? '/notifications') }}" class="btn btn-violet btn-sm">
+                    {{ $n->action_label ?? 'View Details' }}
                 </a>
-                @if(!$n[3])
-                <button @click.stop="markRead({{ $i }})" 
+                @if(!$n->is_read)
+                <button @click.stop="markRead({{ $n->id }})" 
                         class="btn btn-outline btn-sm">
                     Mark as Read
                 </button>
                 @endif
             </div>
             
-            @if($n[3])
+            @if($n->is_read)
             <span class="flex items-center gap-2 text-[12px] text-gray-400 font-semibold">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -176,7 +166,7 @@ $notifications = [
 @endforeach
 
 {{-- EMPTY STATE --}}
-<div x-show="dismissed.length >= {{ count($notifications) }}" 
+<div x-show="dismissed.length >= {{ $notifications->count() }}" 
      x-transition
      class="card text-center py-16">
     <div class="w-16 h-16 bg-violet-50 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -186,7 +176,7 @@ $notifications = [
     </div>
     <p class="text-[18px] font-bold text-gray-900 mb-1">All Caught Up!</p>
     <p class="text-[14px] text-gray-500 mb-5">No notifications to display</p>
-    <button @click="dismissed = []" class="btn btn-violet btn-sm">
+    <button @click="restoreAll()" class="btn btn-violet btn-sm">
         Restore Notifications
     </button>
 </div>
@@ -196,17 +186,18 @@ $notifications = [
 {{-- PAGINATION --}}
 <div class="flex items-center justify-between mt-7 pt-5 border-t border-gray-200 fade-up delay-4">
     <p class="text-[13px] text-gray-500">
-        Showing <span class="font-bold text-gray-900">1–8</span> of <span class="font-bold text-gray-900">16</span> notifications
+        Showing <span class="font-bold text-gray-900">{{ $notifications->firstItem() ?? 0 }}–{{ $notifications->lastItem() ?? 0 }}</span> of <span class="font-bold text-gray-900">{{ $notifications->total() }}</span> notifications
     </p>
     <div class="flex items-center gap-2">
-        <button class="btn btn-outline btn-sm w-9 h-9 p-0">
+        <button @click="goToPage({{ $notifications->currentPage() - 1 }})" @disabled($notifications->onFirstPage()) class="btn btn-outline btn-sm w-9 h-9 p-0">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
             </svg>
         </button>
-        <button class="btn btn-violet btn-sm w-9 h-9 p-0">1</button>
-        <button class="btn btn-outline btn-sm w-9 h-9 p-0">2</button>
-        <button class="btn btn-outline btn-sm w-9 h-9 p-0">
+        @for($page = 1; $page <= max($notifications->lastPage(), 1); $page++)
+        <button @click="goToPage({{ $page }})" class="btn {{ $page === $notifications->currentPage() ? 'btn-violet' : 'btn-outline' }} btn-sm w-9 h-9 p-0">{{ $page }}</button>
+        @endfor
+        <button @click="goToPage({{ $notifications->currentPage() + 1 }})" @disabled(!$notifications->hasMorePages()) class="btn btn-outline btn-sm w-9 h-9 p-0">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
             </svg>
@@ -218,35 +209,95 @@ $notifications = [
 
 @push('scripts')
 <script>
-function notifCenter() {
+function notifCenter(state) {
     return {
-        activeFilter: 'all',
+        activeFilter: state.filter,
         dismissed: [],
-        readItems: [],
-        sortBy: 'recent',
-        searchQuery: '',
-        
-        init() {},
-        
-        markAllRead() {
-            this.readItems = Array.from({ length: 8 }, (_, i) => i);
-            alert('✓ All notifications marked as read');
+        sortBy: state.sort,
+        searchQuery: state.q,
+
+        init() {
+            if (this.searchQuery) {
+                const el = this.$refs.search;
+                el.focus();
+                el.setSelectionRange(el.value.length, el.value.length);
+            }
         },
-        
-        clearAll() {
+
+        async post(url) {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            });
+            return res.ok;
+        },
+
+        navigate(params) {
+            const url = new URL(window.location.href);
+            Object.entries(params).forEach(([key, value]) => {
+                if (value === null || value === '' || value === 'all' || (key === 'sort' && value === 'recent')) {
+                    url.searchParams.delete(key);
+                } else {
+                    url.searchParams.set(key, value);
+                }
+            });
+            window.location.href = url.toString();
+        },
+
+        setFilter(key) {
+            this.navigate({ filter: key, page: null });
+        },
+
+        goToPage(page) {
+            this.navigate({ page: page > 1 ? page : null });
+        },
+
+        async markAllRead() {
+            if (await this.post('/api/notifications/read-all')) {
+                alert('✓ All notifications marked as read');
+                window.location.reload();
+            }
+        },
+
+        async clearAll() {
             if (confirm('Clear all notifications? This action cannot be undone.')) {
-                this.dismissed = Array.from({ length: 8 }, (_, i) => i);
+                if (await this.post('/api/notifications/dismiss-all')) {
+                    window.location.reload();
+                }
             }
         },
-        
-        markRead(index) {
-            if (!this.readItems.includes(index)) {
-                this.readItems.push(index);
+
+        async markRead(id) {
+            if (await this.post('/api/notifications/' + id + '/read')) {
+                window.location.reload();
             }
         },
-        
-        sortNotifications() {},
-        filterNotifications() {}
+
+        async dismiss(id) {
+            this.dismissed.push(id);
+            if (await this.post('/api/notifications/' + id + '/dismiss')) {
+                window.location.reload();
+            } else {
+                this.dismissed = this.dismissed.filter(d => d !== id);
+            }
+        },
+
+        async restoreAll() {
+            if (await this.post('/api/notifications/restore')) {
+                window.location.reload();
+            }
+        },
+
+        sortNotifications() {
+            this.navigate({ sort: this.sortBy, page: null });
+        },
+
+        filterNotifications() {
+            this.navigate({ q: this.searchQuery.trim(), page: null });
+        }
     }
 }
 </script>
