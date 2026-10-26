@@ -21,6 +21,7 @@ class SalesController extends Controller
         // Get sales transactions
         $sales = SalesTransaction::with(['salesItems.inventoryBatch.inventoryItem', 'user'])
             ->where('payment_method', '!=', 'adjustment') // Exclude adjustments
+            ->where('type', 'sale') // Exclude spoilage/wastage write-offs
             ->orderBy('created_at', 'desc')
             ->take(50)
             ->get();
@@ -67,6 +68,7 @@ class SalesController extends Controller
     public function index()
     {
         $sales = SalesTransaction::with(['salesItems.inventoryItem', 'user'])
+            ->where('type', 'sale')
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 

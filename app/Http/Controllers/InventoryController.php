@@ -394,6 +394,7 @@ class InventoryController extends Controller
                     'inventory_item_id' => $inventoryItem->id,
                     'batch_code' => $itemData['batch_code'],
                     'quantity' => $itemData['quantity'],
+                    'initial_quantity' => $itemData['quantity'],
                     'price_per_unit' => $itemData['price_per_unit'],
                     'received_date' => $validated['received_date'],
                     'expiry_date' => $itemData['expiry_date'],
@@ -468,6 +469,7 @@ class InventoryController extends Controller
             $transaction = \App\Models\SalesTransaction::create([
                 'user_id' => auth()->id(),
                 'transaction_code' => $validated['reference'] ?? 'SO-' . now()->format('ymd') . '-' . rand(100, 999),
+                'type' => $validated['type'],
                 'subtotal' => $totalAmount,
                 'tax_amount' => 0,
                 'discount_amount' => 0,
@@ -484,10 +486,11 @@ class InventoryController extends Controller
                 // Create sales item record
                 \App\Models\SalesItem::create([
                     'sale_transaction_id' => $transaction->id,
+                    'inventory_item_id' => $batch->inventory_item_id,
                     'inventory_batch_id' => $batch->id,
                     'quantity' => $itemData['quantity'],
-                    'price_per_unit' => $itemData['price_per_unit'],
-                    'subtotal' => $itemData['total'],
+                    'unit_price' => $itemData['price_per_unit'],
+                    'total_amount' => $itemData['total'],
                 ]);
                 
                 // Reduce batch quantity
@@ -570,6 +573,7 @@ class InventoryController extends Controller
             $transaction = \App\Models\SalesTransaction::create([
                 'user_id' => auth()->id(),
                 'transaction_code' => $validated['reference'] ?? 'ADJ-' . now()->format('ymd') . '-' . rand(100, 999),
+                'type' => 'adjustment',
                 'subtotal' => $totalAmount,
                 'tax_amount' => 0,
                 'discount_amount' => 0,
@@ -583,10 +587,11 @@ class InventoryController extends Controller
             foreach ($transactionItems as $itemData) {
                 \App\Models\SalesItem::create([
                     'sale_transaction_id' => $transaction->id,
+                    'inventory_item_id' => $itemData['batch']->inventory_item_id,
                     'inventory_batch_id' => $itemData['batch']->id,
                     'quantity' => $itemData['type'] === 'add' ? $itemData['quantity'] : -$itemData['quantity'],
-                    'price_per_unit' => $itemData['price_per_unit'],
-                    'subtotal' => $itemData['type'] === 'add' ? $itemData['total'] : -$itemData['total'],
+                    'unit_price' => $itemData['price_per_unit'],
+                    'total_amount' => $itemData['type'] === 'add' ? $itemData['total'] : -$itemData['total'],
                 ]);
             }
 

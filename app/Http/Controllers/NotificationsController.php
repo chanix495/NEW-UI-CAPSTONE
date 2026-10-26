@@ -345,6 +345,35 @@ class NotificationsController extends Controller
             }
         }
 
+        // Batches the XGBoost spoilage model rates High Risk or Critical today
+        if (Schema::hasTable('spoilage_predictions')) {
+            $latest = DB::table('spoilage_predictions')->max('prediction_date');
+            $risky = $latest ? DB::table('spoilage_predictions as p')
+                ->join('inventory_batches as b', 'b.id', '=', 'p.inventory_batch_id')
+                ->join('inventory_items as i', 'i.id', '=', 'p.inventory_item_id')
+                ->where('p.prediction_date', $latest)
+                ->where('p.horizon_day', 0)
+                ->whereIn('p.risk_level', ['Critical', 'High Risk'])
+                ->where('b.status', 'available')
+                ->where('b.quantity', '>', 0)
+                ->select('p.inventory_batch_id', 'p.risk_score', 'p.risk_level', 'p.recommendation', 'b.batch_code', 'b.quantity', 'i.name', 'i.unit')
+                ->get() : collect();
+
+            foreach ($risky as $row) {
+                $alerts[] = [
+                    'dedupe_key' => 'spoilage-risk-' . $row->inventory_batch_id,
+                    'module' => 'Spoilage',
+                    'source' => 'XGBoost',
+                    'severity' => $row->risk_level === 'Critical' ? 'Critical' : 'High',
+                    'title' => 'High Spoilage Risk',
+                    'subtitle' => 'XGBoost Spoilage Prediction',
+                    'message' => "{$row->name} (Batch: {$row->batch_code}) has a predicted spoilage risk of " . number_format($row->risk_score, 1) . "% on {$row->quantity} {$row->unit}. {$row->recommendation}.",
+                    'action_label' => 'View Spoilage',
+                    'action_link' => '/spoilage',
+                ];
+            }
+        }
+
         return $alerts;
     }
 }

@@ -24,6 +24,7 @@ class SalesTransaction extends Model
     protected $fillable = [
         'user_id',
         'transaction_code',
+        'type',
         'subtotal',
         'tax_amount',
         'discount_amount',
@@ -89,7 +90,8 @@ class SalesTransaction extends Model
      */
     public function scopeCompleted($query)
     {
-        return $query->where('status', 'completed');
+        // Spoilage/wastage write-offs and stock adjustments share this table; they are not revenue
+        return $query->where('status', 'completed')->where('type', 'sale');
     }
 
     /**

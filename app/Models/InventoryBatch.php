@@ -26,6 +26,7 @@ class InventoryBatch extends Model
         'inventory_item_id',
         'batch_code',
         'quantity',
+        'initial_quantity',
         'price_per_unit',
         'received_date',
         'expiry_date',
