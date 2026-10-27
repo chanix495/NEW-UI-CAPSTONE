@@ -51,7 +51,11 @@ class RunForecastModels extends Command
         if (in_array($model, ['spoilage', 'all'], true)) {
             $this->line('Running XGBoost spoilage model...');
             $result = $this->runSafely(fn () => $ml->runSpoilagePrediction($horizon));
-            if ($result['success'] ?? false) {
+            if (($result['success'] ?? false) && ($result['model'] ?? null) === 'ShelfLifeRule') {
+                $this->warn($result['message']);
+                $this->info(sprintf('Shelf-life rule: scored %d open batch(es), average risk %s%%',
+                    $result['batches_scored'], $result['avg_risk']));
+            } elseif ($result['success'] ?? false) {
                 $this->info(sprintf(
                     'XGBoost: trained on %d batches, test MAE %s, RMSE %s, R² %s; scored %d open batch(es)',
                     $result['batches'], $result['mae'], $result['rmse'], $result['r2'] ?? 'n/a', $result['batches_scored']

@@ -14,6 +14,11 @@ Features:
 The fitted regressor scores every open batch for today and the next 6 days
 (using OpenWeather's forecast) and writes the results to `spoilage_predictions`.
 
+Until MIN_TRAIN_BATCHES finished batches exist (e.g. at the start of alpha
+testing; the vendor's logbook recorded no spoilage), open batches are scored
+with a shelf-life rule instead (see shelf_life_rule_predictions), and the run is
+logged as a skipped XGBoost run so the rule's scores are never shown as ML output.
+
 Usage: python ml/spoilage_model.py [--horizon 7]
 """
 import argparse
@@ -34,6 +39,10 @@ NUMERIC_FEATURES = [
     "shelf_life_days", "stock_age_days", "days_to_expiry", "remaining_fraction",
     "turnover_rate", "sales_trend", "temperature", "humidity", "rainfall",
 ]
+# Shelf-life rule used until enough batches exist to train XGBoost
+Q10 = 2.0                    # fresh produce decay rate roughly doubles per +10 °C (postharvest Q10 ~2-3)
+REFERENCE_TEMP_C = 27.0      # used only if there is no observed weather
+DEFAULT_SHELF_LIFE_DAYS = 7  # used only if the batch has no expiry date and the fruit no batch history
 RISK_LEVELS = [(70, "Critical"), (50, "High Risk"), (25, "Moderate"), (10, "Low Risk"), (0, "Fresh")]
 
 
@@ -264,6 +273,56 @@ def predict_open_batches(model, fruit_cols, batches, moves, weather, today, hori
     return out
 
 
+def shelf_life_rule_predictions(batches, moves, weather, today, horizon):
+    """Score open batches without a trained model (too few finished batches yet).
+
+    Each batch ages from its received date toward its shelf life (expiry date, else
+    the fruit's typical batch life, else DEFAULT_SHELF_LIFE_DAYS). Hot days count as
+    more than one day: decay rate x Q10 ** ((T - T_ref) / 10), with T_ref the past
+    year's mean temperature, so an average day counts as exactly one day.
+    Risk = 100 * (effective age / shelf life) ** 2, and 100 once past expiry.
+    """
+    open_b = batches[(batches["quantity"] > 0) & (batches["status"] == "available")]
+    if open_b.empty:
+        return []
+
+    dates = pd.date_range(today, periods=horizon, freq="D")
+    stats = item_sales_stats(moves, batches["received_date"].min() - pd.Timedelta(days=28), today)
+    w3 = weather_3day(weather, dates)
+    shelf_lives = typical_shelf_life(batches)
+    observed = weather[~weather["is_forecast"].astype(bool)] if not weather.empty else weather
+    recent = observed[observed.index >= today - pd.Timedelta(days=365)]
+    t_ref = float(recent["temperature"].astype(float).mean()) if len(recent) else REFERENCE_TEMP_C
+
+    out = []
+    for _, b in open_b.iterrows():
+        received = b["received_date"]
+        shelf_life = ((b["expiry_date"] - received).days if pd.notna(b["expiry_date"])
+                      else shelf_lives.get(b["fruit"], DEFAULT_SHELF_LIFE_DAYS))
+        shelf_life = max(shelf_life, 1)
+        temps = weather_for(weather, pd.date_range(received, dates[-1], freq="D"))["temperature"].astype(float)
+        # effective days elapsed before each day starts (age 0 on the day received)
+        effective_age = (Q10 ** ((temps - t_ref) / 10)).cumsum().shift(1, fill_value=0.0)
+        current = feature_row(b, today, b["quantity"], shelf_life, stats)
+
+        for h, day in enumerate(dates):
+            days_to_expiry = current["days_to_expiry"] - h
+            score = 100.0 if days_to_expiry < 0 else min(100.0, 100 * (effective_age[day] / shelf_life) ** 2)
+            level = risk_level(score)
+            weather_day = w3.loc[day]
+            out.append({
+                "inventory_batch_id": int(b["batch_id"]), "inventory_item_id": int(b["item_id"]),
+                "prediction_date": today.date(), "horizon_day": h, "risk_score": round(float(score), 2),
+                "risk_level": level, "stock_age_days": current["stock_age_days"] + h,
+                "turnover_rate": round(current["turnover_rate"], 4), "sales_trend": round(current["sales_trend"], 4),
+                "temperature": round(float(weather_day["temperature"]), 2),
+                "humidity": round(float(weather_day["humidity"]), 2),
+                "rainfall": round(float(weather_day["rainfall"]), 2),
+                "recommendation": recommend(level, days_to_expiry, current["turnover_rate"]),
+            })
+    return out
+
+
 def save_predictions(conn, preds, today):
     now = datetime.now()
     cols = ["inventory_batch_id", "inventory_item_id", "prediction_date", "horizon_day", "risk_score", "risk_level",
@@ -302,9 +361,17 @@ def main():
     df = build_training_set(batches, moves, weather, today)
     n_batches = df["batch_id"].nunique() if not df.empty else 0
     if n_batches < MIN_TRAIN_BATCHES:
-        msg = f"Need at least {MIN_TRAIN_BATCHES} finished batches with sales/spoilage history (have {n_batches})."
+        preds = shelf_life_rule_predictions(batches, moves, weather, today, args.horizon)
+        save_predictions(conn, preds, today)
+        today_preds = [p for p in preds if p["horizon_day"] == 0]
+        msg = (f"XGBoost needs at least {MIN_TRAIN_BATCHES} finished batches with sales/spoilage history "
+               f"(have {n_batches}); risk scored with the shelf-life rule (Q10 = {Q10}) until then.")
         save_run(conn, "XGBoost", "skipped", training_rows=len(df), message=msg)
-        fail(msg)
+        conn.close()
+        emit({"success": True, "model": "ShelfLifeRule", "message": msg, "finished_batches": n_batches,
+              "batches_scored": len(today_preds),
+              "avg_risk": round(float(np.mean([p["risk_score"] for p in today_preds])), 2) if today_preds else 0})
+        return
 
     model, fruit_cols, metrics = train(df)
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
