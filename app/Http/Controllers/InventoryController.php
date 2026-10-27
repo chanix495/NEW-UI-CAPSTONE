@@ -493,9 +493,10 @@ class InventoryController extends Controller
                     'total_amount' => $itemData['total'],
                 ]);
                 
-                // Reduce batch quantity
+                // Reduce batch and item stock
                 $batch->decrement('quantity', $itemData['quantity']);
-                
+                $batch->inventoryItem->decrement('stock_quantity', $itemData['quantity']);
+
                 // Update batch status if quantity is 0
                 if ($batch->quantity <= 0) {
                     $batch->update(['status' => 'depleted']);
@@ -557,12 +558,14 @@ class InventoryController extends Controller
                 
                 if ($validated['type'] === 'add') {
                     $batch->increment('quantity', $adjustmentQty);
+                    $batch->inventoryItem->increment('stock_quantity', $adjustmentQty);
                 } else {
                     if ($batch->quantity < $adjustmentQty) {
                         throw new \Exception("Cannot subtract more than available stock for batch {$batch->batch_code}");
                     }
                     $batch->decrement('quantity', $adjustmentQty);
-                    
+                    $batch->inventoryItem->decrement('stock_quantity', $adjustmentQty);
+
                     if ($batch->quantity <= 0) {
                         $batch->update(['status' => 'depleted']);
                     }
@@ -580,7 +583,7 @@ class InventoryController extends Controller
                 'total_amount' => $validated['type'] === 'add' ? $totalAmount : -$totalAmount,
                 'payment_method' => 'adjustment',
                 'status' => 'completed',
-                'notes' => $validated['reason'] . ($validated['notes'] ? ' - ' . $validated['notes'] : ''),
+                'notes' => $validated['reason'] . (!empty($validated['notes']) ? ' - ' . $validated['notes'] : ''),
             ]);
             
             // Create sales item records for tracking

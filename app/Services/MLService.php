@@ -40,7 +40,7 @@ class MLService
                 'APP_TIMEZONE' => config('app.timezone'),
                 'OPENWEATHER_TIMEZONE' => config('services.openweather.timezone'),
                 'PYTHONIOENCODING' => 'utf-8',
-            ])
+            ] + $this->windowsEnv())
             ->run(array_merge([config('services.ml.python'), base_path('ml/' . $script)], $args));
 
         // The script prints a single JSON line as its last output
@@ -52,5 +52,19 @@ class MLService
         }
 
         return $payload;
+    }
+
+    /**
+     * Python on Windows cannot start without SYSTEMROOT ("failed to get random numbers
+     * to initialize Python"). Under a web server PHP only hands child processes the
+     * variables it sees in $_SERVER, which may not include it, so pass it explicitly.
+     */
+    private function windowsEnv(): array
+    {
+        if (PHP_OS_FAMILY !== 'Windows') {
+            return [];
+        }
+
+        return ['SYSTEMROOT' => getenv('SYSTEMROOT') ?: (getenv('SystemRoot') ?: 'C:\\Windows')];
     }
 }
