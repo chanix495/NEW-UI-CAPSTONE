@@ -26,3 +26,12 @@ Thumbs.db
 # Python
 __pycache__/
 *.pyc
+
+# ML sales forecast (Python)
+/ml/.venv/
+/ml/sales_forecast/data/raw/
+/ml/sales_forecast/model_output/*.pkl
+/ml/vendor_forecast/data/raw/
+/ml/vendor_forecast/model_output/**/*.pkl
+/ml/vendor_forecast/data/processed/
+~$*
