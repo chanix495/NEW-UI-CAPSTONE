@@ -1,26 +1,44 @@
 """SARIMAX sales forecast.
 
-For each fruit, models daily units sold as a seasonal ARIMA process (weekly
+For each fruit, models daily kg sold as a seasonal ARIMA process (weekly
 seasonality, s=7) with weather as exogenous regressors:
 
     sales_t = SARIMA(p,d,q)(P,D,Q,7) + b1*temperature_t + b2*humidity_t + b3*rainfall_t
 
-The order is picked by AIC from a small candidate grid. Accuracy is measured on
-a 14-day hold-out before the final model is refit on all history and used to
-forecast the next HORIZON days with OpenWeather's forecast as future exog values.
+Pre-train + live updates: each fruit's model is fitted on its full sales
+history (including the vendor's imported 2020-2024 logbook) and saved under
+storage/app/ml/sarimax/. Every run applies the saved parameters to the latest
+sales without re-estimating them (a Kalman filter pass, takes seconds), so
+sales logged in the app move the forecast straight away. Only the order,
+estimated parameters and exog scaling are saved (JSON), not pickled objects. Parameters are
+re-estimated only when a fruit has no saved model or with --refit (scheduled
+weekly): the order is picked by AIC from a small candidate grid, accuracy is
+measured on the last HOLDOUT_DAYS recorded days, then the model is refit on all
+history.
 
-Usage: python ml/sales_forecast.py [--horizon 7]
+Days with no sales of any fruit (store closed, or nothing logged, such as the
+gap between the logbook and live use) are missing values, not zeros. A fruit
+with no sales on a day other fruits sold counts as 0.
+
+Usage: python ml/sales_forecast.py [--horizon 7] [--refit]
 """
 import argparse
+import json
+import os
 import warnings
+from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
+
+# one BLAS thread per worker process; fruits are refit in parallel
+for _var in ("OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "OMP_NUM_THREADS"):
+    os.environ.setdefault(_var, "1")
 
 import numpy as np
 import pandas as pd
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
-from common import (WEATHER_COLS, connect, emit, fail, load_weather, local_today, query_df,
+from common import (MODEL_DIR, WEATHER_COLS, connect, emit, fail, load_weather, local_today, query_df,
                     save_run, to_local_date, weather_for)
 
 warnings.simplefilter("ignore", ConvergenceWarning)
@@ -30,9 +48,10 @@ warnings.simplefilter("ignore", RuntimeWarning)
 MIN_HISTORY_DAYS = 28
 MIN_SALES_DAYS = 10
 HOLDOUT_DAYS = 14
-MAX_HISTORY_DAYS = 365
+STALE_AFTER_DAYS = 7  # note in the forecast when no sales were logged for this long
 ORDERS = [(1, 0, 1), (2, 0, 1), (1, 1, 1)]
 SEASONAL_ORDERS = [(1, 0, 1, 7), (0, 1, 1, 7)]
+SARIMAX_DIR = MODEL_DIR / "sarimax"
 
 
 def load_sales(conn):
@@ -49,22 +68,36 @@ def load_sales(conn):
     return df
 
 
-def scale_exog(train_exog, *others):
-    mean = train_exog.mean()
-    std = train_exog.std().replace(0, 1).fillna(1)
-    return [(x - mean) / std for x in (train_exog, *others)]
+def daily_series(grp, open_days, history_end):
+    """Daily quantity from the fruit's first sale to history_end; NaN on days nothing was sold at all."""
+    daily = grp.groupby("date")["quantity"].sum()
+    series = daily.reindex(pd.date_range(daily.index.min(), history_end, freq="D"))
+    series[series.isna() & series.index.isin(open_days)] = 0.0
+    return series.astype(float)
 
 
-def fit(y, exog, order, seasonal_order):
-    model = SARIMAX(
-        y, exog=exog, order=order, seasonal_order=seasonal_order,
+def has_enough_history(series):
+    return series.notna().sum() >= MIN_HISTORY_DAYS + HOLDOUT_DAYS and (series > 0).sum() >= MIN_SALES_DAYS
+
+
+def scaler(exog):
+    return exog.mean(), exog.std().replace(0, 1).fillna(1)
+
+
+def build_model(y, exog, order, seasonal_order):
+    return SARIMAX(
+        y, exog=exog, order=tuple(order), seasonal_order=tuple(seasonal_order),
         trend="c" if order[1] == 0 and seasonal_order[1] == 0 else "n",
         enforce_stationarity=False, enforce_invertibility=False,
     )
-    return model.fit(disp=False, maxiter=200)
+
+
+def fit(y, exog, order, seasonal_order):
+    return build_model(y, exog, order, seasonal_order).fit(disp=False, maxiter=200)
 
 
 def select_order(y, exog):
+    """Lowest-AIC candidate; returns (order, seasonal_order, fitted results)."""
     best = None
     for order in ORDERS:
         for seasonal in SEASONAL_ORDERS:
@@ -72,20 +105,19 @@ def select_order(y, exog):
                 res = fit(y, exog, order, seasonal)
             except Exception:
                 continue
-            if np.isfinite(res.aic) and (best is None or res.aic < best[0]):
-                best = (res.aic, order, seasonal)
+            if np.isfinite(res.aic) and (best is None or res.aic < best[2].aic):
+                best = (order, seasonal, res)
     if best is None:
         raise RuntimeError("no SARIMAX order converged")
-    return best[1], best[2]
+    return best
 
 
-def evaluate(y, exog, order, seasonal):
-    """Fit on all but the last HOLDOUT_DAYS and score the forecast against them."""
-    y_train, y_test = y.iloc[:-HOLDOUT_DAYS], y.iloc[-HOLDOUT_DAYS:]
-    x_train, x_test = scale_exog(exog.iloc[:-HOLDOUT_DAYS], exog.iloc[-HOLDOUT_DAYS:])
-    res = fit(y_train, x_train, order, seasonal)
-    pred = np.clip(res.get_forecast(HOLDOUT_DAYS, exog=x_test).predicted_mean.to_numpy(), 0, None)
-    actual = y_test.to_numpy()
+def evaluate(res, y, x, test_days):
+    """Score a fit (trained before test_days) on the holdout days; gap days in between are skipped."""
+    horizon = y.index[(y.index >= test_days[0]) & (y.index <= test_days[-1])]
+    fc = res.get_forecast(len(horizon), exog=x.loc[horizon])
+    pred = np.clip(pd.Series(fc.predicted_mean.to_numpy(), index=horizon).loc[test_days].to_numpy(), 0, None)
+    actual = y.loc[test_days].to_numpy()
 
     err = actual - pred
     mae = float(np.mean(np.abs(err)))
@@ -99,30 +131,55 @@ def evaluate(y, exog, order, seasonal):
             "wape": round(wape * 100, 2), "accuracy": round(accuracy, 2)}
 
 
-def forecast_item(series, weather, future_dates):
-    y = series.astype(float)
-    exog = weather_for(weather, y.index)
-    future_exog = weather_for(weather, future_dates)
+def model_path(item_id):
+    return SARIMAX_DIR / f"item_{item_id}.json"
 
-    order, seasonal = select_order(y.iloc[:-HOLDOUT_DAYS], scale_exog(exog.iloc[:-HOLDOUT_DAYS])[0])
-    metrics = evaluate(y, exog, order, seasonal)
 
-    x_all, x_future = scale_exog(exog, future_exog)
-    res = fit(y, x_all, order, seasonal)
-    fc = res.get_forecast(len(future_dates), exog=x_future)
-    mean = np.clip(fc.predicted_mean.to_numpy(), 0, None)
+def refit_item(item_id, y, exog):
+    """Re-estimate one fruit's model on its full history and save it. Runs in a worker process."""
+    test_days = y.dropna().index[-HOLDOUT_DAYS:]
+    train = y.index < test_days[0]
+    mean, std = scaler(exog[train])
+    x = (exog - mean) / std
+    order, seasonal, res_train = select_order(y[train], x[train])
+    metrics = evaluate(res_train, y, x, test_days)
+
+    mean, std = scaler(exog)
+    res = fit(y, (exog - mean) / std, order, seasonal)
+
+    meta = {
+        "order": list(order), "seasonal_order": list(seasonal), "aic": round(float(res.aic), 2),
+        "params": {name: float(v) for name, v in res.params.items()},
+        "exog_mean": mean.to_dict(), "exog_std": std.to_dict(), "metrics": metrics,
+        "weather_coefficients": {c: round(float(res.params.get(c, 0.0)), 4) for c in WEATHER_COLS},
+        "weather_pvalues": {c: round(float(res.pvalues.get(c, 1.0)), 4) for c in WEATHER_COLS},
+        "trained_through": str(y.dropna().index[-1].date()),
+        "fitted_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    SARIMAX_DIR.mkdir(parents=True, exist_ok=True)
+    model_path(item_id).write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    return meta
+
+
+def load_model(item_id):
+    path = model_path(item_id)
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+
+
+def forecast_item(meta, y, exog, future_exog):
+    """Filter the latest history with the saved parameters (no re-estimation) and forecast."""
+    mean, std = pd.Series(meta["exog_mean"]), pd.Series(meta["exog_std"])
+    model = build_model(y, (exog - mean) / std, meta["order"], meta["seasonal_order"])
+    current = model.filter(pd.Series(meta["params"])[model.param_names].to_numpy())
+    fc = current.get_forecast(len(future_exog), exog=(future_exog - mean) / std)
+    pred = np.clip(fc.predicted_mean.to_numpy(), 0, None)
     ci = np.clip(fc.conf_int(alpha=0.05).to_numpy(), 0, None)
-
-    coefs = {c: round(float(res.params.get(c, 0.0)), 4) for c in WEATHER_COLS}
-    pvalues = {c: round(float(res.pvalues.get(c, 1.0)), 4) for c in WEATHER_COLS}
-    metrics.update({"order": list(order), "seasonal_order": list(seasonal), "aic": round(float(res.aic), 2),
-                    "weather_coefficients": coefs, "weather_pvalues": pvalues})
-    return mean, ci[:, 0], ci[:, 1], future_exog, metrics
+    return pred, ci[:, 0], ci[:, 1]
 
 
 def baseline_item(series, weather, future_dates):
-    """Too little history for SARIMAX: same-weekday average of recent sales."""
-    recent = series.iloc[-28:]
+    """Too little history for SARIMAX: same-weekday average of the last 28 recorded days."""
+    recent = series.dropna().iloc[-28:]
     by_dow = recent.groupby(recent.index.dayofweek).mean()
     overall = recent.mean() if len(recent) else 0.0
     mean = np.array([by_dow.get(d.dayofweek, overall) for d in future_dates], dtype=float)
@@ -132,9 +189,28 @@ def baseline_item(series, weather, future_dates):
     return mean, np.clip(mean - 1.96 * spread, 0, None), mean + 1.96 * spread, future_exog
 
 
+def refit_all(fruits, weather, force):
+    """Re-estimate models in parallel for fruits that need it. Returns ({item_id: meta}, {item_id: error})."""
+    todo = [f for f in fruits if has_enough_history(f["series"]) and (force or load_model(f["item_id"]) is None)]
+    refitted, errors = {}, {}
+    if not todo:
+        return refitted, errors
+    with ProcessPoolExecutor(max_workers=min(len(todo), os.cpu_count() or 1)) as pool:
+        futures = {f["item_id"]: pool.submit(refit_item, f["item_id"], f["series"],
+                                             weather_for(weather, f["series"].index))
+                   for f in todo}
+        for item_id, future in futures.items():
+            try:
+                refitted[item_id] = future.result()
+            except Exception as exc:
+                errors[item_id] = f"refit failed: {exc}"
+    return refitted, errors
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--horizon", type=int, default=7)
+    parser.add_argument("--refit", action="store_true", help="re-estimate every fruit's parameters")
     args = parser.parse_args()
 
     conn = connect()
@@ -148,23 +224,42 @@ def main():
     # Today is still in progress, so history ends yesterday and the forecast starts today
     history_end = today - pd.Timedelta(days=1)
     future_dates = pd.date_range(today, periods=args.horizon, freq="D")
+    future_exog = weather_for(weather, future_dates)
+
+    open_days = pd.DatetimeIndex(sales["date"].unique())
+    fruits = [
+        {"item_id": int(item_id), "name": name, "price": float(grp["price_per_unit"].iloc[0]),
+         "series": daily_series(grp, open_days, history_end)}
+        for (item_id, name), grp in sales.groupby(["inventory_item_id", "name"])
+    ]
+    refitted, refit_errors = refit_all(fruits, weather, args.refit)
 
     rows, per_fruit, skipped = [], {}, []
-    for (item_id, name), grp in sales.groupby(["inventory_item_id", "name"]):
-        price = float(grp["price_per_unit"].iloc[0])
-        daily = grp.groupby("date")["quantity"].sum()
-        start = max(daily.index.min(), history_end - pd.Timedelta(days=MAX_HISTORY_DAYS - 1))
-        series = daily.reindex(pd.date_range(start, history_end, freq="D"), fill_value=0.0)
-
-        use_sarimax = len(series) >= MIN_HISTORY_DAYS + HOLDOUT_DAYS and (series > 0).sum() >= MIN_SALES_DAYS
+    for f in fruits:
+        item_id, name, price, series = f["item_id"], f["name"], f["price"], f["series"]
         model_name = "SARIMAX"
+        fut_exog = future_exog
         try:
-            if not use_sarimax:
-                raise ValueError(f"only {len(series)} days / {(series > 0).sum()} sales days of history")
-            mean, lo, hi, fut_exog, metrics = forecast_item(series, weather, future_dates)
-            per_fruit[name] = metrics
-            accuracy = metrics["accuracy"]
-            note = f"SARIMAX{tuple(metrics['order'])}x{tuple(metrics['seasonal_order'])} AIC={metrics['aic']}"
+            if not has_enough_history(series):
+                raise ValueError(f"only {series.notna().sum()} recorded days / {(series > 0).sum()} sales days of history")
+            if item_id in refit_errors:
+                raise RuntimeError(refit_errors[item_id])
+            meta = load_model(item_id)
+            if meta is None:
+                raise RuntimeError("no saved model")
+            mean, lo, hi = forecast_item(meta, series, weather_for(weather, series.index), future_exog)
+            accuracy = meta["metrics"]["accuracy"]
+            last_sale = series.dropna().index[-1]
+            per_fruit[name] = {**meta["metrics"], "order": meta["order"], "seasonal_order": meta["seasonal_order"],
+                               "aic": meta["aic"], "weather_coefficients": meta["weather_coefficients"],
+                               "weather_pvalues": meta["weather_pvalues"], "trained_through": meta["trained_through"],
+                               "fitted_at": meta["fitted_at"], "refitted": item_id in refitted,
+                               "last_recorded_day": str(last_sale.date())}
+            note = (f"SARIMAX{tuple(meta['order'])}x{tuple(meta['seasonal_order'])} AIC={meta['aic']}, "
+                    f"trained through {meta['trained_through']}")
+            gap = (history_end - last_sale).days
+            if gap >= STALE_AFTER_DAYS:
+                note += f"; no sales recorded since {last_sale.date()} ({gap} days), so intervals stay wide until new sales are logged"
         except Exception as exc:
             model_name = "Baseline"
             mean, lo, hi, fut_exog = baseline_item(series, weather, future_dates)
@@ -175,7 +270,7 @@ def main():
         for i, d in enumerate(future_dates):
             w = fut_exog.iloc[i] if len(fut_exog) else {}
             rows.append((
-                int(item_id), name, d.date(), round(float(mean[i]), 2), round(float(lo[i]), 2), round(float(hi[i]), 2),
+                item_id, name, d.date(), round(float(mean[i]), 2), round(float(lo[i]), 2), round(float(hi[i]), 2),
                 round(float(mean[i]) * price, 2), accuracy,
                 None if pd.isna(w.get("temperature")) else round(float(w["temperature"]), 2),
                 None if pd.isna(w.get("humidity")) else round(float(w["humidity"]), 2),
@@ -200,6 +295,7 @@ def main():
         "horizon_days": args.horizon,
         "fruits_modeled": len(per_fruit),
         "fruits_baseline": len(skipped),
+        "fruits_refitted": len(refitted),
         "overall_accuracy": round(float(np.mean(accuracies)), 2) if accuracies else None,
         "mean_mae": round(float(np.mean([m["mae"] for m in per_fruit.values()])), 3) if per_fruit else None,
         "mean_rmse": round(float(np.mean([m["rmse"] for m in per_fruit.values()])), 3) if per_fruit else None,

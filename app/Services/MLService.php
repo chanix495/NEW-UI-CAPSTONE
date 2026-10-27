@@ -11,9 +11,13 @@ use RuntimeException;
  */
 class MLService
 {
-    public function runSalesForecast(int $horizon = 7): array
+    /**
+     * Applies the saved per-fruit SARIMAX models to the latest sales (fast). $refit
+     * re-estimates every fruit's parameters first, which takes a few minutes.
+     */
+    public function runSalesForecast(int $horizon = 7, bool $refit = false): array
     {
-        return $this->run('sales_forecast.py', ['--horizon', (string) $horizon]);
+        return $this->run('sales_forecast.py', array_merge(['--horizon', (string) $horizon], $refit ? ['--refit'] : []));
     }
 
     public function runSpoilagePrediction(int $horizon = 7): array

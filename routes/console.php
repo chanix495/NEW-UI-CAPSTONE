@@ -11,5 +11,8 @@ Artisan::command('inspire', function () {
 // Weather every 3 hours (matches OpenWeather's 3-hour forecast steps)
 Schedule::command('weather:sync')->everyThreeHours();
 
-// Retrain both models each morning before the store opens
+// Re-estimate the SARIMAX parameters weekly (a few minutes); daily runs only update them with new sales
+Schedule::command('ml:run sales --skip-weather --refit')->weeklyOn(0, '05:00')->timezone(config('services.openweather.timezone'));
+
+// Update both models each morning before the store opens
 Schedule::command('ml:run all --skip-weather')->dailyAt('05:30')->timezone(config('services.openweather.timezone'));

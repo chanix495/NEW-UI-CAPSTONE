@@ -11,7 +11,8 @@ class RunForecastModels extends Command
     protected $signature = 'ml:run
                             {model=all : sales | spoilage | all}
                             {--horizon=7 : Days to forecast}
-                            {--skip-weather : Do not refresh the OpenWeather forecast first}';
+                            {--skip-weather : Do not refresh the OpenWeather forecast first}
+                            {--refit : Re-estimate the SARIMAX parameters instead of only updating with new sales}';
 
     protected $description = 'Train and run the SARIMAX sales forecast and/or XGBoost spoilage model';
 
@@ -31,11 +32,11 @@ class RunForecastModels extends Command
 
         if (in_array($model, ['sales', 'all'], true)) {
             $this->line('Running SARIMAX sales forecast...');
-            $result = $this->runSafely(fn () => $ml->runSalesForecast($horizon));
+            $result = $this->runSafely(fn () => $ml->runSalesForecast($horizon, (bool) $this->option('refit')));
             if ($result['success'] ?? false) {
                 $this->info(sprintf(
-                    'SARIMAX: %d fruit(s) modeled, %d on baseline, accuracy %s%%, MAE %s, RMSE %s',
-                    $result['fruits_modeled'], $result['fruits_baseline'],
+                    'SARIMAX: %d fruit(s) modeled (%d refitted), %d on baseline, accuracy %s%%, MAE %s, RMSE %s',
+                    $result['fruits_modeled'], $result['fruits_refitted'] ?? 0, $result['fruits_baseline'],
                     $result['overall_accuracy'] ?? 'n/a', $result['mean_mae'] ?? 'n/a', $result['mean_rmse'] ?? 'n/a'
                 ));
                 foreach ($result['baseline'] as $b) {

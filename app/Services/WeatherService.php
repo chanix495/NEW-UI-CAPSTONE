@@ -116,11 +116,12 @@ class WeatherService
     /**
      * Fill in past daily weather so the models have weather for every historical sales day.
      * Uses OpenWeather One Call 3.0 day_summary; falls back to the Open-Meteo archive
-     * if that endpoint is not part of the API key's plan.
+     * if that endpoint is not part of the API key's plan. Pass $source = 'open-meteo' to skip
+     * OpenWeather (one paid request per day) for long ranges.
      *
      * @return array{source: string, days: int}
      */
-    public function backfill(Carbon $from, Carbon $to, bool $overwrite = false): array
+    public function backfill(Carbon $from, Carbon $to, bool $overwrite = false, ?string $source = null): array
     {
         $dates = [];
         for ($d = $from->copy(); $d->lte($to); $d->addDay()) {
@@ -132,6 +133,10 @@ class WeatherService
 
         if (empty($dates)) {
             return ['source' => 'none', 'days' => 0];
+        }
+
+        if ($source === 'open-meteo') {
+            return ['source' => 'open-meteo', 'days' => $this->backfillFromOpenMeteo($dates)];
         }
 
         if ($this->isConfigured()) {
