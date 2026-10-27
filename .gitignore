@@ -35,3 +35,5 @@ __pycache__/
 /ml/vendor_forecast/model_output/**/*.pkl
 /ml/vendor_forecast/data/processed/
 ~$*
+/ml/vendor_forecast/model_output/sales/test_predictions.csv
+/ml/vendor_forecast/model_output/sales/forecast_chart.png

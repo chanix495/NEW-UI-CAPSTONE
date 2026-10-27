@@ -70,9 +70,14 @@ selection, rolling evaluation and metrics functions are imported, not copied.
 |---|---|
 | `summary.csv` | one row per fruit: model, MAE/RMSE/MAPE vs baseline, improvement, significant weather terms |
 | `metrics.json` | per fruit: order, AIC grid, exog, coefficients + p-values, metrics |
-| `test_predictions.csv` | date, product, actual, sarimax, baseline for 2024 |
-| `forecast_chart.png` | actual vs SARIMAX vs baseline, last 12 weeks of 2024, per fruit |
+| `test_predictions.csv` | date, product, actual, sarimax, baseline for 2024 (git-ignored) |
+| `forecast_chart.png` | actual vs SARIMAX vs baseline, last 12 weeks of 2024, per fruit (git-ignored) |
 | `models/<fruit>.pkl` | fitted results without data arrays (git-ignored) |
+
+The repository is public, so files containing the vendor's daily sales (raw
+logbook, processed CSV, test predictions and the per-fruit chart) are kept out
+of git. They are regenerated locally by the two scripts above. Only aggregate
+results (`summary.csv`, `metrics.json`) are committed.
 
 ## Results (run on 2026-10-27)
 
