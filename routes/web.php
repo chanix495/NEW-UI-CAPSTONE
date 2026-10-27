@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\ForecastController;
 
 // Landing
 Route::get('/', fn() => view('landing'))->name('landing');
@@ -85,8 +86,8 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:owner,manager'])->group(function () {
         Route::get('/inventory', [\App\Http\Controllers\InventoryController::class, 'page'])->name('inventory');
         Route::get('/sales', [\App\Http\Controllers\SalesController::class, 'page'])->name('sales');
-        Route::get('/forecast', fn() => view('pages.forecast'))->name('forecast');
-        Route::get('/spoilage', fn() => view('pages.spoilage'))->name('spoilage');
+        Route::get('/forecast', [ForecastController::class, 'forecastPage'])->name('forecast');
+        Route::get('/spoilage', [ForecastController::class, 'spoilagePage'])->name('spoilage');
         Route::get('/analytics', [AnalyticsController::class, 'page'])->name('analytics');
         Route::get('/reports', [\App\Http\Controllers\ReportsController::class, 'page'])->name('reports');
     });
@@ -142,6 +143,12 @@ Route::prefix('api')->middleware(['auth'])->group(function () {
         Route::get('/analytics/cumulative-revenue', [AnalyticsController::class, 'getCumulativeRevenue'])->name('api.analytics.cumulative-revenue');
         Route::get('/analytics/waste-reduction', [AnalyticsController::class, 'getWasteReduction'])->name('api.analytics.waste-reduction');
         Route::get('/analytics/stacked-sales', [AnalyticsController::class, 'getStackedSales'])->name('api.analytics.stacked-sales');
+
+        // AI models (SARIMAX sales forecast, XGBoost spoilage) + OpenWeather
+        Route::get('/forecast/data', [ForecastController::class, 'forecastData'])->name('api.forecast.data');
+        Route::get('/spoilage/data', [ForecastController::class, 'spoilageData'])->name('api.spoilage.data');
+        Route::post('/ml/run', [ForecastController::class, 'run'])->name('api.ml.run');
+        Route::get('/weather', [ForecastController::class, 'weather'])->name('api.weather');
     });
     
     // Owner only routes

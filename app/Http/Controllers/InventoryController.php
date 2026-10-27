@@ -394,6 +394,7 @@ class InventoryController extends Controller
                     'inventory_item_id' => $inventoryItem->id,
                     'batch_code' => $itemData['batch_code'],
                     'quantity' => $itemData['quantity'],
+                    'initial_quantity' => $itemData['quantity'],
                     'price_per_unit' => $itemData['price_per_unit'],
                     'received_date' => $validated['received_date'],
                     'expiry_date' => $itemData['expiry_date'],
@@ -468,6 +469,7 @@ class InventoryController extends Controller
             $transaction = \App\Models\SalesTransaction::create([
                 'user_id' => auth()->id(),
                 'transaction_code' => $validated['reference'] ?? 'SO-' . now()->format('ymd') . '-' . rand(100, 999),
+                'type' => $validated['type'],
                 'subtotal' => $totalAmount,
                 'tax_amount' => 0,
                 'discount_amount' => 0,
@@ -484,15 +486,17 @@ class InventoryController extends Controller
                 // Create sales item record
                 \App\Models\SalesItem::create([
                     'sale_transaction_id' => $transaction->id,
+                    'inventory_item_id' => $batch->inventory_item_id,
                     'inventory_batch_id' => $batch->id,
                     'quantity' => $itemData['quantity'],
-                    'price_per_unit' => $itemData['price_per_unit'],
-                    'subtotal' => $itemData['total'],
+                    'unit_price' => $itemData['price_per_unit'],
+                    'total_amount' => $itemData['total'],
                 ]);
                 
-                // Reduce batch quantity
+                // Reduce batch and item stock
                 $batch->decrement('quantity', $itemData['quantity']);
-                
+                $batch->inventoryItem->decrement('stock_quantity', $itemData['quantity']);
+
                 // Update batch status if quantity is 0
                 if ($batch->quantity <= 0) {
                     $batch->update(['status' => 'depleted']);
@@ -554,12 +558,14 @@ class InventoryController extends Controller
                 
                 if ($validated['type'] === 'add') {
                     $batch->increment('quantity', $adjustmentQty);
+                    $batch->inventoryItem->increment('stock_quantity', $adjustmentQty);
                 } else {
                     if ($batch->quantity < $adjustmentQty) {
                         throw new \Exception("Cannot subtract more than available stock for batch {$batch->batch_code}");
                     }
                     $batch->decrement('quantity', $adjustmentQty);
-                    
+                    $batch->inventoryItem->decrement('stock_quantity', $adjustmentQty);
+
                     if ($batch->quantity <= 0) {
                         $batch->update(['status' => 'depleted']);
                     }
@@ -570,23 +576,25 @@ class InventoryController extends Controller
             $transaction = \App\Models\SalesTransaction::create([
                 'user_id' => auth()->id(),
                 'transaction_code' => $validated['reference'] ?? 'ADJ-' . now()->format('ymd') . '-' . rand(100, 999),
+                'type' => 'adjustment',
                 'subtotal' => $totalAmount,
                 'tax_amount' => 0,
                 'discount_amount' => 0,
                 'total_amount' => $validated['type'] === 'add' ? $totalAmount : -$totalAmount,
                 'payment_method' => 'adjustment',
                 'status' => 'completed',
-                'notes' => $validated['reason'] . ($validated['notes'] ? ' - ' . $validated['notes'] : ''),
+                'notes' => $validated['reason'] . (!empty($validated['notes']) ? ' - ' . $validated['notes'] : ''),
             ]);
             
             // Create sales item records for tracking
             foreach ($transactionItems as $itemData) {
                 \App\Models\SalesItem::create([
                     'sale_transaction_id' => $transaction->id,
+                    'inventory_item_id' => $itemData['batch']->inventory_item_id,
                     'inventory_batch_id' => $itemData['batch']->id,
                     'quantity' => $itemData['type'] === 'add' ? $itemData['quantity'] : -$itemData['quantity'],
-                    'price_per_unit' => $itemData['price_per_unit'],
-                    'subtotal' => $itemData['type'] === 'add' ? $itemData['total'] : -$itemData['total'],
+                    'unit_price' => $itemData['price_per_unit'],
+                    'total_amount' => $itemData['type'] === 'add' ? $itemData['total'] : -$itemData['total'],
                 ]);
             }
 
