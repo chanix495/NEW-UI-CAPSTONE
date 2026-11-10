@@ -26,6 +26,7 @@ class User extends Authenticatable
         'phone',
         'status',
         'archived_at',
+        'avatar_path',
     ];
 
     /**
@@ -112,5 +113,13 @@ class User extends Authenticatable
         ];
 
         return in_array($feature, $permissions[$this->role] ?? []);
+    }
+
+    /** URL of the profile picture, or null when the user has none (initials are shown instead). */
+    public function avatarUrl(): ?string
+    {
+        return $this->avatar_path
+            ? route('avatar', ['user' => $this->id]) . '?v=' . substr(md5($this->avatar_path), 0, 8)
+            : null;
     }
 }

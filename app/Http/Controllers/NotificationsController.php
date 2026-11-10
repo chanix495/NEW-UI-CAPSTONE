@@ -195,7 +195,17 @@ class NotificationsController extends Controller
      */
     private function syncNotifications(int $userId): void
     {
-        $alerts = collect($this->buildAlerts())->keyBy('dedupe_key');
+        // Alert types the user switched off in Settings are not generated for them
+        $prefs = \App\Models\OwnerSetting::forUser($userId);
+        $enabled = [
+            'inventory' => $prefs->low_stock_alerts,
+            'spoilage' => $prefs->spoilage_alerts,
+            'forecast' => $prefs->forecast_alerts,
+        ];
+
+        $alerts = collect($this->buildAlerts())
+            ->filter(fn ($a) => $enabled[strtolower($a['module'] ?? '')] ?? true)
+            ->keyBy('dedupe_key');
 
         $existing = Notification::where('user_id', $userId)
             ->whereNotNull('dedupe_key')

@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="en" x-data="appState()" :class="darkMode ? 'dark' : ''" class="h-full">
+<html lang="en" x-data="appState(@js($appearance['dark'] ?? false))" :class="darkMode ? 'dark' : ''" class="h-full {{ ($appearance['dark'] ?? false) ? 'dark' : '' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -225,6 +225,21 @@
         .dark .tbl thead th { background:#16122B; }
         .dark .tbl tbody td { border-bottom-color:#1E1A35; }
         .dark .tbl tbody tr:hover td { background:#1A1433; }
+        .dark main, .dark .bg-\[\#F5F3FF\] { background:#0F0B1F !important; }
+        .dark .bg-white, .dark header, .dark aside, .dark .stat-card, .dark .feature-card, .dark .hero-card, .dark .glass { background-color:#1A1433 !important; }
+        .dark .bg-\[\#F9F8FF\], .dark .bg-gray-50, .dark .bg-gray-100 { background-color:#16122B !important; }
+        .dark [class*="text-gray-9"], .dark [class*="text-gray-8"] { color:#F3F4F6 !important; }
+        .dark [class*="text-gray-7"], .dark [class*="text-gray-6"], .dark [class*="text-gray-5"] { color:#C7CAD4 !important; }
+        .dark [class*="text-gray-4"] { color:#9CA3AF !important; }
+        .dark [class*="border-gray-"], .dark [class*="border-violet-"], .dark .border-b, .dark .border-t { border-color:rgba(124,58,237,.22) !important; }
+        .dark .inp, .dark input, .dark select, .dark textarea { background-color:#16122B !important; color:#E5E7EB !important; border-color:rgba(124,58,237,.3) !important; }
+    </style>
+    {{-- Saved appearance: colour theme + font size --}}
+    <style id="ftAppearance">
+        :root { @foreach (($appearance['shades'] ?? []) as $n => $hex) --brand-{{ $n }}: {{ $hex }}; @endforeach --violet: {{ $appearance['shades'][600] ?? '#7C3AED' }}; --violet-dark: {{ $appearance['shades'][700] ?? '#6D28D9' }}; --violet-light: {{ $appearance['shades'][500] ?? '#8B5CF6' }}; --violet-pale: {{ $appearance['shades'][100] ?? '#EDE9FE' }}; }
+        body, main, .bg-\[\#F5F3FF\] { background-color: var(--brand-50); }
+        .dark body, .dark main, .dark .bg-\[\#F5F3FF\] { background-color:#0F0B1F !important; }
+        main { zoom: {{ $appearance['zoom'] ?? 1 }}; }
     </style>
 </head>
 <body x-cloak>
@@ -252,20 +267,47 @@
     </div>
 </div>
 
-{{-- ╔══════════ AI ASSISTANT WIDGET ══════════╗ --}}
-@include('partials.ai-widget')
-
 @stack('modals')
 @stack('scripts')
 
 <script>
-function appState() {
+function appState(dark = false) {
     return {
         sidebarOpen: true,
-        darkMode: false,
+        darkMode: dark,
         aiOpen: false,
+        init() {
+            // The moon button in the top bar changes dark mode too, so keep the saved value in step
+            let saved = this.darkMode;
+            this.$watch('darkMode', (v) => {
+                if (v === saved) return;
+                saved = v;
+                window.ftSaveAppearance({ dark_mode: v });
+            });
+        },
     }
 }
+
+// Paint a saved appearance straight away (no reload) and remember it.
+window.ftApplyAppearance = function (a) {
+    const root = document.documentElement;
+    Object.entries(a.shades || {}).forEach(([n, hex]) => root.style.setProperty('--brand-' + n, hex));
+    root.style.setProperty('--violet', a.shades[600]);
+    root.style.setProperty('--violet-dark', a.shades[700]);
+    root.style.setProperty('--violet-light', a.shades[500]);
+    root.style.setProperty('--violet-pale', a.shades[100]);
+    const main = document.querySelector('main');
+    if (main) main.style.zoom = a.zoom;
+};
+window.ftSaveAppearance = async function (changes) {
+    const res = await fetch('/api/settings/appearance', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content },
+        body: JSON.stringify(changes),
+    });
+    if (!res.ok) throw new Error('Could not save appearance');
+    return (await res.json()).appearance;
+};
 Chart.defaults.font.family = 'Inter';
 Chart.defaults.plugins.legend.labels.usePointStyle = true;
 Chart.defaults.plugins.legend.labels.padding = 16;

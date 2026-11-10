@@ -102,7 +102,7 @@
 
     <div class="meta">
         <strong>Report Period:</strong> {{ $startDate->format('F j, Y') }} - {{ $endDate->format('F j, Y') }}<br>
-        <strong>Generated:</strong> {{ now()->format('F j, Y g:i A') }}
+        <strong>Generated:</strong> {{ $generatedAt->format('F j, Y g:i A') }}
     </div>
 
     <div class="summary">
@@ -134,15 +134,13 @@
         </thead>
         <tbody>
             @forelse($topProducts as $index => $product)
-            @if($product->inventoryItem)
             <tr>
                 <td>{{ $index + 1 }}</td>
-                <td>{{ $product->inventoryItem->name }}</td>
-                <td>{{ number_format($product->total_quantity, 2) }} {{ $product->inventoryItem->unit }}</td>
-                <td>₱{{ number_format($product->total_sales, 2) }}</td>
-                <td>₱{{ number_format($product->total_quantity > 0 ? $product->total_sales / $product->total_quantity : 0, 2) }}</td>
+                <td>{{ $product->name }}</td>
+                <td>{{ number_format($product->quantity, 2) }} {{ $product->unit }}</td>
+                <td>₱{{ number_format($product->revenue, 2) }}</td>
+                <td>₱{{ number_format($product->quantity > 0 ? $product->revenue / $product->quantity : 0, 2) }}</td>
             </tr>
-            @endif
             @empty
             <tr>
                 <td colspan="5" style="text-align:center; color:#999; padding:30px;">

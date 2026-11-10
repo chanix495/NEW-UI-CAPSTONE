@@ -95,7 +95,7 @@ Route::middleware(['auth'])->group(function () {
     // All authenticated users (Owner + Manager + Cashier)
     Route::get('/pos', [\App\Http\Controllers\SalesController::class, 'pos'])->name('pos');
     Route::get('/notifications', [\App\Http\Controllers\NotificationsController::class, 'page'])->name('notifications');
-    Route::get('/settings', fn() => view('pages.settings'))->name('settings');
+    Route::get('/settings', [\App\Http\Controllers\SettingsController::class, 'page'])->name('settings');
 });
 
 // API Routes (AJAX endpoints for all modules)
@@ -128,6 +128,8 @@ Route::prefix('api')->middleware(['auth'])->group(function () {
         
         // Reports API
         Route::get('/reports/sales', [\App\Http\Controllers\ReportsController::class, 'salesReport'])->name('api.reports.sales');
+        Route::get('/reports/forecast', [\App\Http\Controllers\ReportsController::class, 'forecastReport'])->name('api.reports.forecast');
+        Route::get('/reports/spoilage', [\App\Http\Controllers\ReportsController::class, 'spoilageReport'])->name('api.reports.spoilage');
         Route::get('/reports/inventory', [\App\Http\Controllers\ReportsController::class, 'inventoryReport'])->name('api.reports.inventory');
         Route::get('/reports/expiry', [\App\Http\Controllers\ReportsController::class, 'expiryReport'])->name('api.reports.expiry');
         Route::get('/reports/profit-loss', [\App\Http\Controllers\ReportsController::class, 'profitLossReport'])->name('api.reports.profit-loss');
@@ -159,12 +161,30 @@ Route::prefix('api')->middleware(['auth'])->group(function () {
         Route::post('/users/{user}/archive', [\App\Http\Controllers\UserController::class, 'archive'])->name('api.users.archive');
         Route::post('/users/{user}/restore', [\App\Http\Controllers\UserController::class, 'restore'])->name('api.users.restore');
 
+        // Data backup & restore
+        Route::get('/backups', [\App\Http\Controllers\SettingsController::class, 'backups'])->name('api.backups.index');
+        Route::post('/backups', [\App\Http\Controllers\SettingsController::class, 'createBackup'])->name('api.backups.store');
+        Route::put('/backups/schedule', [\App\Http\Controllers\SettingsController::class, 'updateSchedule'])->name('api.backups.schedule');
+        Route::post('/backups/restore-upload', [\App\Http\Controllers\SettingsController::class, 'restoreUpload'])->name('api.backups.restore-upload');
+        Route::get('/backups/{backup}/download', [\App\Http\Controllers\SettingsController::class, 'downloadBackup'])->name('api.backups.download');
+        Route::post('/backups/{backup}/restore', [\App\Http\Controllers\SettingsController::class, 'restoreBackup'])->name('api.backups.restore');
+
         // Dashboard API
         Route::get('/dashboard/metrics', [\App\Http\Controllers\DashboardController::class, 'getDashboardMetrics'])->name('api.dashboard.metrics');
         Route::get('/dashboard/sales-trend', [\App\Http\Controllers\DashboardController::class, 'getSalesTrend'])->name('api.dashboard.sales-trend');
         Route::get('/dashboard/inventory-health', [\App\Http\Controllers\DashboardController::class, 'getInventoryHealth'])->name('api.dashboard.inventory-health');
     });
     
+    // Settings: every user manages their own profile and preferences
+    Route::put('/settings/profile', [\App\Http\Controllers\SettingsController::class, 'updateProfile'])->name('api.settings.profile');
+    Route::put('/settings/notifications', [\App\Http\Controllers\SettingsController::class, 'updateNotification'])->name('api.settings.notifications');
+    Route::post('/settings/avatar', [\App\Http\Controllers\SettingsController::class, 'updateAvatar'])->name('api.settings.avatar');
+    Route::delete('/settings/avatar', [\App\Http\Controllers\SettingsController::class, 'removeAvatar'])->name('api.settings.avatar.remove');
+    Route::put('/settings/appearance', [\App\Http\Controllers\SettingsController::class, 'updateAppearance'])->name('api.settings.appearance');
+    Route::put('/settings/region', [\App\Http\Controllers\SettingsController::class, 'updateRegion'])->name('api.settings.region');
+
+    Route::get('/avatar/{user}', [\App\Http\Controllers\SettingsController::class, 'avatar'])->name('avatar');
+
     // All authenticated users (Owner + Manager + Cashier) - POS and Notifications
     Route::get('/pos/products', [\App\Http\Controllers\SalesController::class, 'getAvailableProducts'])->name('api.pos.products');
     Route::post('/pos/sale', [\App\Http\Controllers\SalesController::class, 'createSale'])->name('api.pos.sale');

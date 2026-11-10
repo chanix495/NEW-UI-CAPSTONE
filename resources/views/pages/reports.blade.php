@@ -1,5 +1,5 @@
 <x-app-layout>
-<x-slot name="title">Reports � FreshTrack</x-slot>
+<x-slot name="title">Reports — FreshTrack</x-slot>
 
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7 fade-up">
     <div>
@@ -26,7 +26,7 @@
     </div>
 </div>
 
-<div class="card overflow-hidden fade-up delay-1" x-data="reportsDataController()" x-init="init()">
+<div class="card overflow-hidden fade-up delay-1" x-data="reportsDataController()">
     {{-- Tabs --}}
     <div class="flex gap-1 p-2 bg-gray-50 border-b border-gray-100">
     @foreach([['sales','money','Sales'],['forecast','chart','Forecast'],['inventory','box','Inventory'],['spoilage','warn','Spoilage'],['profit','gem','Profit']] as [$t,$icon,$l])
@@ -51,28 +51,30 @@
             <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600"></div>
             <span class="ml-3 text-gray-600">Loading sales data...</span>
         </div>
-        
+
         <div x-show="!loading || tab!=='sales'">
         <div class="flex items-center justify-between mb-6">
-            <div><h3 class="font-bold text-gray-900 text-[16px]">Sales Performance Report</h3><p class="text-[12px] text-gray-400 mt-0.5">June 1�23, 2026</p></div>
-            <select class="inp" style="width:auto;padding:8px 14px;border-radius:10px"><option>June 2026</option><option>May 2026</option><option>April 2026</option></select>
+            <div><h3 class="font-bold text-gray-900 text-[16px]">Sales Performance Report</h3><p class="text-[12px] text-gray-400 mt-0.5" x-text="periodLabel('sales')"></p></div>
+            @include('pages.partials.reports-period')
         </div>
+        <p x-show="errors.sales" x-text="errors.sales" class="text-[13px] text-red-500 mb-4"></p>
         <div class="grid grid-cols-4 gap-4 mb-6">
-            @foreach([['Total Revenue','?342,800','? 8.3%','badge-green'],['Transactions','847','? 12.1%','badge-green'],['Avg Daily Sales','?14,904','? 5.4%','badge-green'],['Best Fruit','Mango','�','badge-violet']] as [$l,$v,$c,$b])
+            <template x-for="card in salesCards" :key="card.label">
             <div class="bg-[#F5F3FF] rounded-2xl p-4 border border-violet-100 text-center">
-                <p class="text-[22px] font-black text-gray-900">{{ $v }}</p>
-                <p class="text-[12px] text-gray-500 mt-0.5">{{ $l }}</p>
-                <span class="badge {{ $b }} text-[10px] mt-2">{{ $c }}</span>
+                <p class="text-[22px] font-black text-gray-900" x-text="card.value"></p>
+                <p class="text-[12px] text-gray-500 mt-0.5" x-text="card.label"></p>
+                <span class="badge badge-violet text-[10px] mt-2" x-text="card.badge"></span>
             </div>
-            @endforeach
+            </template>
         </div>
         <canvas id="salesReportChart" height="80" class="mb-6"></canvas>
         <table class="tbl w-full">
             <thead><tr><th class="text-left">Fruit</th><th class="text-left">Units Sold</th><th class="text-left">Revenue</th><th class="text-left">% of Total</th><th class="text-left">Trend</th></tr></thead>
             <tbody>
-            @foreach([['Mango','2,450 kg','?84,200','24.6%','?'],['Durian','890 kg','?62,400','18.2%','?'],['Mangosteen','1,120 kg','?42,600','12.4%','?'],['Pineapple','1,860 kg','?38,100','11.1%','?'],['Banana','3,200 kg','?29,700','8.7%','?'],['Lanzones','850 kg','?21,300','6.2%','?'],['Pomelo','620 kg','?18,500','5.4%','?']] as $r)
-            <tr><td class="font-medium text-gray-800">{{ $r[0] }}</td><td class="text-gray-500 text-[13px]">{{ $r[1] }}</td><td class="font-bold text-gray-900">{{ $r[2] }}</td><td class="text-gray-500">{{ $r[3] }}</td><td class="font-black text-[16px] {{ $r[4]==='?'?'text-green-600':($r[4]==='?'?'text-red-500':'text-blue-600') }}">{{ $r[4] }}</td></tr>
-            @endforeach
+            <template x-for="r in (sales?.top_products || [])" :key="r.product_name">
+            <tr><td class="font-medium text-gray-800" x-text="r.product_name"></td><td class="text-gray-500 text-[13px]" x-text="num(r.quantity_sold) + ' ' + (r.unit || '')"></td><td class="font-bold text-gray-900" x-text="peso(r.total_sales)"></td><td class="text-gray-500" x-text="pct(r.share_percent)"></td><td class="font-black text-[16px]" :class="r.trend==='up' ? 'text-green-600' : (r.trend==='down' ? 'text-red-500' : 'text-blue-600')" x-text="r.trend==='up' ? '↑' : (r.trend==='down' ? '↓' : '→')"></td></tr>
+            </template>
+            <tr x-show="sales && !sales.error && !(sales.top_products || []).length"><td colspan="5" class="text-center text-gray-400 text-[13px] py-8">No sales recorded for this period.</td></tr>
             </tbody>
         </table>
         </div>
@@ -80,21 +82,33 @@
 
     {{-- FORECAST --}}
     <div x-show="tab==='forecast'" class="p-6">
-        <h3 class="font-bold text-gray-900 text-[16px] mb-5">Forecast Accuracy Report</h3>
+        <div x-show="loading && tab==='forecast'" class="flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600"></div>
+            <span class="ml-3 text-gray-600">Loading forecast data...</span>
+        </div>
+
+        <div x-show="!loading || tab!=='forecast'">
+        <div class="flex items-center justify-between mb-5">
+            <div><h3 class="font-bold text-gray-900 text-[16px]">Forecast Accuracy Report</h3><p class="text-[12px] text-gray-400 mt-0.5" x-text="periodLabel('forecast')"></p></div>
+            @include('pages.partials.reports-period')
+        </div>
+        <p x-show="errors.forecast" x-text="errors.forecast" class="text-[13px] text-red-500 mb-4"></p>
         <div class="grid grid-cols-4 gap-4 mb-6">
-            @foreach([['Overall Accuracy','96.4%','badge-green'],['MAPE Score','3.6%','badge-blue'],['Model Version','v2.4.1','badge-violet'],['Training Data','14 months','badge-gray']] as [$l,$v,$b])
-            <div class="bg-[#F5F3FF] rounded-2xl p-4 border border-violet-100 text-center"><p class="text-[22px] font-black text-gray-900">{{ $v }}</p><p class="text-[12px] text-gray-500 mt-0.5">{{ $l }}</p><span class="badge {{ $b }} text-[10px] mt-2">Verified</span></div>
-            @endforeach
+            <template x-for="card in forecastCards" :key="card.label">
+            <div class="bg-[#F5F3FF] rounded-2xl p-4 border border-violet-100 text-center"><p class="text-[22px] font-black text-gray-900" x-text="card.value"></p><p class="text-[12px] text-gray-500 mt-0.5" x-text="card.label"></p><span class="badge badge-violet text-[10px] mt-2" x-text="card.badge"></span></div>
+            </template>
         </div>
         <canvas id="forecastAccReport" height="100" class="mb-6"></canvas>
         <table class="tbl w-full">
             <thead><tr><th class="text-left">Fruit</th><th class="text-left">Forecast</th><th class="text-left">Actual</th><th class="text-left">Error</th><th class="text-left">Accuracy</th></tr></thead>
             <tbody>
-            @foreach([['Mango','?84,000','?84,200','0.24%','99.8%'],['Durian','?65,000','?62,400','4.0%','96.0%'],['Mangosteen','?44,000','?42,600','3.2%','96.8%'],['Pineapple','?41,000','?38,100','7.1%','92.9%'],['Banana','?28,000','?29,700','-6.1%','93.9%']] as $r)
-            <tr><td class="font-medium text-gray-800">{{ $r[0] }}</td><td class="text-gray-500">{{ $r[1] }}</td><td class="text-gray-500">{{ $r[2] }}</td><td class="font-semibold {{ str_starts_with($r[3],'-')?'text-green-600':'text-amber-600' }}">{{ $r[3] }}</td><td><span class="badge badge-green text-[11px]">{{ $r[4] }}</span></td></tr>
-            @endforeach
+            <template x-for="r in (forecast?.fruits || [])" :key="r.fruit">
+            <tr><td class="font-medium text-gray-800" x-text="r.fruit"></td><td class="text-gray-500" x-text="peso(r.forecast)"></td><td class="text-gray-500" x-text="peso(r.actual)"></td><td class="font-semibold" :class="r.error_percent !== null && Math.abs(r.error_percent) <= 5 ? 'text-green-600' : 'text-amber-600'" x-text="r.error_percent === null ? '—' : (r.error_percent > 0 ? '+' : '') + num(r.error_percent, 1) + '%'"></td><td><span class="badge badge-green text-[11px]" x-text="pct(r.accuracy)"></span></td></tr>
+            </template>
+            <tr x-show="forecast && !forecast.error && !(forecast.fruits || []).length"><td colspan="5" class="text-center text-gray-400 text-[13px] py-8">No finished forecast days in this period yet. Forecasts are scored against actual sales once the day has passed.</td></tr>
             </tbody>
         </table>
+        </div>
     </div>
 
     {{-- INVENTORY --}}
@@ -104,16 +118,21 @@
             <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600"></div>
             <span class="ml-3 text-gray-600">Loading inventory data...</span>
         </div>
-        
+
         <div x-show="!loading || tab!=='inventory'">
-        <h3 class="font-bold text-gray-900 text-[16px] mb-5">Inventory Turnover Report</h3>
+        <div class="flex items-center justify-between mb-5">
+            <div><h3 class="font-bold text-gray-900 text-[16px]">Inventory Turnover Report</h3><p class="text-[12px] text-gray-400 mt-0.5" x-text="periodLabel('inventory')"></p></div>
+            @include('pages.partials.reports-period')
+        </div>
+        <p x-show="errors.inventory" x-text="errors.inventory" class="text-[13px] text-red-500 mb-4"></p>
         <canvas id="invTurnChart" height="100" class="mb-6"></canvas>
         <table class="tbl w-full">
             <thead><tr><th class="text-left">Fruit</th><th class="text-left">Opening Stock</th><th class="text-left">Received</th><th class="text-left">Sold</th><th class="text-left">Closing</th><th class="text-left">Turnover</th></tr></thead>
             <tbody>
-            @foreach([['Mango','380 kg','460 kg','2,450 kg','390 kg','6.3x'],['Durian','120 kg','200 kg','890 kg','145 kg','7.4x'],['Pomelo','85 kg','40 kg','620 kg','8 kg','2.1x'],['Pineapple','160 kg','300 kg','1,860 kg','118 kg','11.6x'],['Banana','240 kg','600 kg','3,200 kg','210 kg','13.3x']] as $r)
-            <tr><td class="font-medium text-gray-800">{{ $r[0] }}</td><td class="text-gray-500">{{ $r[1] }}</td><td class="text-gray-500">{{ $r[2] }}</td><td class="font-semibold text-green-600">{{ $r[3] }}</td><td class="text-gray-500">{{ $r[4] }}</td><td class="font-black text-violet-700">{{ $r[5] }}</td></tr>
-            @endforeach
+            <template x-for="r in (inventory?.items || [])" :key="r.product_name">
+            <tr><td class="font-medium text-gray-800" x-text="r.product_name"></td><td class="text-gray-500" x-text="num(r.opening_stock) + ' ' + (r.unit || '')"></td><td class="text-gray-500" x-text="num(r.received) + ' ' + (r.unit || '')"></td><td class="font-semibold text-green-600" x-text="num(r.sold) + ' ' + (r.unit || '')"></td><td class="text-gray-500" x-text="num(r.closing_stock) + ' ' + (r.unit || '')"></td><td class="font-black text-violet-700" x-text="r.turnover === null ? '—' : num(r.turnover, 1) + 'x'"></td></tr>
+            </template>
+            <tr x-show="inventory && !inventory.error && !(inventory.items || []).length"><td colspan="6" class="text-center text-gray-400 text-[13px] py-8">No stock or stock movement recorded for this period.</td></tr>
             </tbody>
         </table>
         </div>
@@ -126,22 +145,27 @@
             <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600"></div>
             <span class="ml-3 text-gray-600">Loading spoilage data...</span>
         </div>
-        
+
         <div x-show="!loading || tab!=='spoilage'">
-        <h3 class="font-bold text-gray-900 text-[16px] mb-5">Spoilage Loss Report</h3>
+        <div class="flex items-center justify-between mb-5">
+            <div><h3 class="font-bold text-gray-900 text-[16px]">Spoilage Loss Report</h3><p class="text-[12px] text-gray-400 mt-0.5" x-text="periodLabel('spoilage')"></p></div>
+            @include('pages.partials.reports-period')
+        </div>
+        <p x-show="errors.spoilage" x-text="errors.spoilage" class="text-[13px] text-red-500 mb-4"></p>
         <div class="grid grid-cols-4 gap-4 mb-6">
-            @foreach([['Total Spoilage','42 kg'],['Spoilage Rate','8.4%'],['Financial Loss','?6,240'],['Prevented Loss','?18,290']] as [$l,$v])
-            <div class="bg-[#F5F3FF] rounded-2xl p-4 border border-violet-100 text-center"><p class="text-[22px] font-black text-gray-900">{{ $v }}</p><p class="text-[12px] text-gray-500 mt-0.5">{{ $l }}</p></div>
-            @endforeach
+            <template x-for="card in spoilageCards" :key="card.label">
+            <div class="bg-[#F5F3FF] rounded-2xl p-4 border border-violet-100 text-center"><p class="text-[22px] font-black text-gray-900" x-text="card.value"></p><p class="text-[12px] text-gray-500 mt-0.5" x-text="card.label"></p></div>
+            </template>
         </div>
         <table class="tbl w-full">
             <thead><tr><th class="text-left">Fruit</th><th class="text-left">Spoilage Qty</th><th class="text-left">Loss Value</th><th class="text-left">Spoilage %</th><th class="text-left">Main Cause</th><th class="text-left">Status</th></tr></thead>
             <tbody>
-            @foreach([['Mango','18 kg','?2,160','12%','High temperature','badge-red'],['Durian','12 kg','?3,840','45%','Extended storage','badge-red'],['Pomelo','5 kg','?350','8%','High humidity','badge-amber'],['Lanzones','4 kg','?360','6%','Poor ventilation','badge-amber'],['Pineapple','3 kg','?225','4%','Normal degradation','badge-green']] as $r)
-            <tr><td class="font-medium text-gray-800">{{ $r[0] }}</td><td class="text-red-600 font-semibold">{{ $r[1] }}</td><td class="font-bold text-gray-900">{{ $r[2] }}</td><td>
-                <div class="flex items-center gap-2"><div class="progress-bar w-12"><div class="{{ (int)$r[3]>30?'bg-red-500':((int)$r[3]>15?'bg-amber-500':'bg-green-500') }} h-full rounded-full" style="width:{{ min((int)$r[3],100) }}%"></div></div><span class="text-[12.5px] font-bold text-gray-800">{{ $r[3] }}</span></div>
-            </td><td class="text-gray-500 text-[12.5px]">{{ $r[4] }}</td><td><span class="badge {{ $r[5] }} text-[11px]">{{ (int)$r[3]>30?'Critical':((int)$r[3]>10?'Moderate':'Low Risk') }}</span></td></tr>
-            @endforeach
+            <template x-for="r in (spoilage?.fruits || [])" :key="r.fruit">
+            <tr><td class="font-medium text-gray-800" x-text="r.fruit"></td><td class="text-red-600 font-semibold" x-text="num(r.quantity) + ' ' + (r.unit || '')"></td><td class="font-bold text-gray-900" x-text="peso(r.loss_value)"></td><td>
+                <div class="flex items-center gap-2"><div class="progress-bar w-12"><div :class="r.spoilage_percent>30 ? 'bg-red-500' : (r.spoilage_percent>15 ? 'bg-amber-500' : 'bg-green-500')" class="h-full rounded-full" :style="'width:' + Math.min(r.spoilage_percent, 100) + '%'"></div></div><span class="text-[12.5px] font-bold text-gray-800" x-text="pct(r.spoilage_percent)"></span></div>
+            </td><td class="text-gray-500 text-[12.5px]" x-text="r.cause"></td><td><span :class="r.spoilage_percent>30 ? 'badge-red' : (r.spoilage_percent>10 ? 'badge-amber' : 'badge-green')" class="badge text-[11px]" x-text="r.spoilage_percent>30 ? 'Critical' : (r.spoilage_percent>10 ? 'Moderate' : 'Low Risk')"></span></td></tr>
+            </template>
+            <tr x-show="spoilage && !spoilage.error && !(spoilage.fruits || []).length"><td colspan="6" class="text-center text-gray-400 text-[13px] py-8">No spoilage or wastage recorded for this period.</td></tr>
             </tbody>
         </table>
         </div>
@@ -154,362 +178,264 @@
             <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600"></div>
             <span class="ml-3 text-gray-600">Loading profit data...</span>
         </div>
-        
+
         <div x-show="!loading || tab!=='profit'">
-        <h3 class="font-bold text-gray-900 text-[16px] mb-5">Profit & Loss Report � June 2026</h3>
-        <div class="grid grid-cols-4 gap-4 mb-6">
-            @foreach([['Gross Revenue','?342,800','text-violet-600'],['Total COGS','?198,400','text-red-600'],['Gross Profit','?144,400','text-green-600'],['Net Margin','42.1%','text-blue-600']] as [$l,$v,$c])
-            <div class="bg-[#F5F3FF] rounded-2xl p-4 border border-violet-100 text-center"><p class="text-[22px] font-black {{ $c }}">{{ $v }}</p><p class="text-[12px] text-gray-500 mt-0.5">{{ $l }}</p></div>
-            @endforeach
+        <div class="flex items-center justify-between mb-5">
+            <div><h3 class="font-bold text-gray-900 text-[16px]">Profit &amp; Loss Report <span x-text="profit?.period ? '· ' + profit.period.label : ''"></span></h3></div>
+            @include('pages.partials.reports-period')
         </div>
+        <p x-show="errors.profit" x-text="errors.profit" class="text-[13px] text-red-500 mb-4"></p>
+        <div class="grid grid-cols-4 gap-4 mb-6">
+            <template x-for="card in profitCards" :key="card.label">
+            <div class="bg-[#F5F3FF] rounded-2xl p-4 border border-violet-100 text-center"><p class="text-[22px] font-black" :class="card.color" x-text="card.value"></p><p class="text-[12px] text-gray-500 mt-0.5" x-text="card.label"></p></div>
+            </template>
+        </div>
+        <p x-show="profit?.summary && profit.summary.cost_coverage !== null && profit.summary.cost_coverage < 100" class="text-[12px] text-gray-400 mb-4" x-text="'Cost is known for ' + num(profit?.summary?.cost_coverage, 1) + '% of this period\'s sales (sales without a linked stock batch have no cost recorded), so profit may be overstated.'"></p>
         <canvas id="profitTrendChart" height="100"></canvas>
         </div>
     </div>
 </div>
 
 
-
 @push('scripts')
 <script>
-// Reports Data Controller
+// Reports Data Controller: every figure on this page comes from /api/reports/*
 function reportsDataController() {
-    const controller = {
+    const charts = {};   // Chart.js instances (kept out of Alpine's reactive state)
+    const gc = 'rgba(124,58,237,.06)';
+    const palette = ['#7C3AED', '#10B981', '#3B82F6', '#EF4444', '#EC4899', '#14B8A6', '#F59E0B', '#8B5CF6'];
+
+    const peso = (v, d = 0) => '₱' + Number(v || 0).toLocaleString('en-PH', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const num = (v, d = 2) => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: d });
+    const pct = (v, d = 1) => (v === null || v === undefined) ? '—' : num(v, d) + '%';
+    const arrow = (c) => (c === null || c === undefined) ? '—' : (c >= 0 ? '▲ ' : '▼ ') + num(Math.abs(c), 1) + '%';
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    const kilo = (v) => '₱' + (v / 1000).toFixed(0) + 'k';
+
+    const draw = (id, config) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (charts[id]) charts[id].destroy();
+        charts[id] = new Chart(el, config);
+    };
+
+    return {
         tab: 'sales',
         loading: false,
-        salesData: null,
-        inventoryData: null,
-        expiryData: null,
-        profitData: null,
-        
+        period: @json($defaultPeriod),
+        periods: @json($periods),
+        sales: null, forecast: null, inventory: null, spoilage: null, profit: null,
+        errors: { sales: '', forecast: '', inventory: '', spoilage: '', profit: '' },
+        peso, num, pct,
+
         async init() {
-            // Expose controller globally for button access
-            window.reportController = this;
-            // Load sales data by default
-            await this.loadSalesReport();
+            window.reportController = this;   // the header buttons call into this controller
+            await this.load('sales');
         },
-        
-        async switchTab(newTab) {
-            this.tab = newTab;
-            
-            // Load data based on tab
-            switch(newTab) {
-                case 'sales':
-                    if (!this.salesData) await this.loadSalesReport();
-                    break;
-                case 'inventory':
-                    if (!this.inventoryData) await this.loadInventoryReport();
-                    break;
-                case 'spoilage':
-                    if (!this.expiryData) await this.loadExpiryReport();
-                    break;
-                case 'profit':
-                    if (!this.profitData) await this.loadProfitReport();
-                    break;
-            }
+
+        periodLabel(tab) {
+            return this[tab]?.period?.label || '';
         },
-        
-        async loadSalesReport() {
+
+        async switchTab(tab) {
+            this.tab = tab;
+            if (!this[tab]) await this.load(tab);
+            else this.$nextTick(() => this.render(tab));
+        },
+
+        // A new period invalidates everything that was loaded for the old one
+        async changePeriod() {
+            const current = this.tab;
+            ['sales', 'forecast', 'inventory', 'spoilage', 'profit'].forEach((t) => { if (t !== current) this[t] = null; });
+            await this.load(current);
+        },
+
+        async load(tab) {
+            const path = { sales: 'sales', forecast: 'forecast', inventory: 'inventory', spoilage: 'spoilage', profit: 'profit-loss' }[tab];
             this.loading = true;
+            this.errors[tab] = '';
             try {
-                const endDate = new Date().toISOString().split('T')[0];
-                const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                
-                const response = await fetch(`/api/reports/sales?start_date=${startDate}&end_date=${endDate}`);
-                if (!response.ok) throw new Error('Failed to fetch sales data');
-                
-                this.salesData = await response.json();
-                console.log('? Sales Report loaded:', this.salesData);
-            } catch (error) {
-                console.error('? Error loading sales report:', error);
-                this.salesData = { error: true, message: error.message };
+                const res = await fetch(`/api/reports/${path}?period=${encodeURIComponent(this.period)}`, { headers: { 'Accept': 'application/json' } });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.message || 'Could not load this report. Please try again.');
+                this[tab] = data;
+            } catch (e) {
+                this.errors[tab] = e.message;
+                this[tab] = { error: true, period: null };
             } finally {
                 this.loading = false;
             }
+            this.$nextTick(() => this.render(tab));
         },
-        
-        async loadInventoryReport() {
-            this.loading = true;
-            try {
-                const response = await fetch('/api/reports/inventory');
-                if (!response.ok) throw new Error('Failed to fetch inventory data');
-                
-                this.inventoryData = await response.json();
-                console.log('? Inventory Report loaded:', this.inventoryData);
-            } catch (error) {
-                console.error('? Error loading inventory report:', error);
-                this.inventoryData = { error: true, message: error.message };
-            } finally {
-                this.loading = false;
+
+        // ---- summary cards ---------------------------------------------------
+        get salesCards() {
+            const s = this.sales;
+            if (!s || s.error) return ['Total Revenue', 'Transactions', 'Avg Daily Sales', 'Best Fruit'].map((label) => ({ label, value: '—', badge: '—' }));
+            return [
+                { label: 'Total Revenue', value: peso(s.summary.total_sales), badge: arrow(s.change.revenue) },
+                { label: 'Transactions', value: num(s.summary.total_transactions, 0), badge: arrow(s.change.transactions) },
+                { label: 'Avg Daily Sales', value: peso(s.summary.avg_daily_sales), badge: arrow(s.change.avg_daily) },
+                { label: 'Best Fruit', value: s.summary.best_product ? s.summary.best_product.name : '—', badge: s.summary.best_product ? pct(s.summary.best_product.share_percent) + ' of sales' : '—' },
+            ];
+        },
+        get forecastCards() {
+            const f = this.forecast;
+            const sm = f && !f.error ? f.summary : null;
+            const verified = sm && sm.model_status === 'success';
+            return [
+                { label: 'Overall Accuracy', value: sm ? pct(sm.overall_accuracy ?? sm.model_accuracy) : '—', badge: sm && sm.overall_accuracy !== null ? 'vs actual sales' : (sm && sm.model_accuracy !== null ? 'Model validation' : 'No data yet') },
+                { label: 'MAPE Score', value: sm ? pct(sm.mape) : '—', badge: sm && sm.mape !== null ? 'Model validation' : 'No data yet' },
+                { label: 'Model Version', value: sm && sm.model ? sm.model : '—', badge: sm && sm.trained_at ? 'Trained ' + sm.trained_at : 'Not trained yet' },
+                { label: 'Training Data', value: sm && sm.training_rows ? num(sm.training_rows, 0) + ' records' : '—', badge: verified ? 'Verified' : 'Unverified' },
+            ];
+        },
+        get spoilageCards() {
+            const s = this.spoilage;
+            if (!s || s.error) return ['Total Spoilage', 'Spoilage Rate', 'Financial Loss', 'Prevented Loss'].map((label) => ({ label, value: '—' }));
+            const m = s.summary;
+            return [
+                { label: 'Total Spoilage', value: num(m.total_spoilage_qty) + ' ' + m.unit },
+                { label: 'Spoilage Rate', value: pct(m.spoilage_rate) },
+                { label: 'Financial Loss', value: peso(m.financial_loss) },
+                { label: 'Prevented Loss', value: peso(m.prevented_loss) },
+            ];
+        },
+        get profitCards() {
+            const p = this.profit;
+            const m = p && !p.error ? p.summary : null;
+            return [
+                { label: 'Gross Revenue', value: m ? peso(m.total_revenue) : '—', color: 'text-violet-600' },
+                { label: 'Total COGS', value: m ? peso(m.cost_of_goods_sold) : '—', color: 'text-red-600' },
+                { label: 'Gross Profit', value: m ? peso(m.gross_profit) : '—', color: 'text-green-600' },
+                { label: 'Net Margin', value: m ? pct(m.gross_margin_percentage) : '—', color: 'text-blue-600' },
+            ];
+        },
+
+        // ---- charts ----------------------------------------------------------
+        render(tab) {
+            const d = this[tab];
+            if (!d || d.error) return;
+            if (tab === 'sales') {
+                const rows = d.sales_by_date;
+                draw('salesReportChart', { type: 'line', data: { labels: rows.map((r) => r.label), datasets: [{ label: 'Daily Revenue', data: rows.map((r) => r.total_sales), borderColor: '#7C3AED', backgroundColor: 'rgba(124,58,237,.07)', borderWidth: 2.5, fill: true, tension: .4, pointRadius: 0 }] },
+                    options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#9CA3AF', maxTicksLimit: 15 } }, y: { beginAtZero: true, grid: { color: gc }, border: { display: false }, ticks: { font: { size: 10 }, color: '#9CA3AF', callback: kilo } } } } });
+            } else if (tab === 'forecast') {
+                const w = d.weekly;
+                draw('forecastAccReport', { type: 'line', data: { labels: w.labels, datasets: w.series.map((s, i) => ({ label: s.fruit, data: s.data, borderColor: palette[i % palette.length], tension: .4, fill: false, borderWidth: 2, pointRadius: 4, spanGaps: true })) },
+                    options: { responsive: true, plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } }, scales: { x: { grid: { display: false } }, y: { min: 0, max: 100, grid: { color: gc }, border: { display: false }, ticks: { callback: (v) => v + '%', font: { size: 10 }, color: '#9CA3AF' } } } } });
+            } else if (tab === 'inventory') {
+                const rows = d.items.filter((r) => r.turnover !== null);
+                draw('invTurnChart', { type: 'bar', data: { labels: rows.map((r) => r.product_name), datasets: [{ label: 'Turnover Rate', data: rows.map((r) => r.turnover), backgroundColor: rows.map((_, i) => palette[i % palette.length]), borderRadius: 10 }] },
+                    options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: gc }, border: { display: false }, ticks: { font: { size: 10 }, color: '#9CA3AF', callback: (v) => v + 'x' } } } } });
+            } else if (tab === 'profit') {
+                const m = d.monthly;
+                draw('profitTrendChart', { type: 'bar', data: { labels: m.map((r) => r.label), datasets: [{ label: 'Revenue', data: m.map((r) => r.revenue), backgroundColor: 'rgba(124,58,237,.65)', borderRadius: 8 }, { label: 'COGS', data: m.map((r) => r.cogs), backgroundColor: 'rgba(249,115,22,.65)', borderRadius: 8 }, { label: 'Profit', data: m.map((r) => r.profit), backgroundColor: 'rgba(16,185,129,.65)', borderRadius: 8 }] },
+                    options: { responsive: true, plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } }, scales: { x: { grid: { display: false } }, y: { grid: { color: gc }, border: { display: false }, ticks: { font: { size: 10 }, color: '#9CA3AF', callback: kilo } } } } });
             }
         },
-        
-        async loadExpiryReport() {
-            this.loading = true;
-            try {
-                const response = await fetch('/api/reports/expiry?days=30');
-                if (!response.ok) throw new Error('Failed to fetch expiry data');
-                
-                this.expiryData = await response.json();
-                console.log('? Expiry/Spoilage Report loaded:', this.expiryData);
-            } catch (error) {
-                console.error('? Error loading expiry report:', error);
-                this.expiryData = { error: true, message: error.message };
-            } finally {
-                this.loading = false;
+
+        // ---- exports ---------------------------------------------------------
+        // One table-shaped description of the current tab feeds CSV, Excel and the filename.
+        exportModel() {
+            const d = this[this.tab];
+            if (!d || d.error) return null;
+            const label = d.period ? d.period.label : '';
+            switch (this.tab) {
+                case 'sales': return {
+                    title: 'Sales Report', file: 'sales_report', label,
+                    summary: [['Total Revenue', peso(d.summary.total_sales)], ['Transactions', d.summary.total_transactions], ['Average Daily Sales', peso(d.summary.avg_daily_sales)], ['Average Transaction', peso(d.summary.average_transaction)], ['Best Fruit', d.summary.best_product ? d.summary.best_product.name : '—']],
+                    headers: ['Fruit', 'Units Sold', 'Unit', 'Revenue', '% of Total', 'Trend'],
+                    rows: d.top_products.map((r) => [r.product_name, r.quantity_sold, r.unit, r.total_sales, r.share_percent, r.trend]),
+                };
+                case 'forecast': return {
+                    title: 'Forecast Accuracy Report', file: 'forecast_report', label,
+                    summary: [['Overall Accuracy', pct(d.summary.overall_accuracy)], ['Model Accuracy (validation)', pct(d.summary.model_accuracy)], ['MAPE', pct(d.summary.mape)], ['Model', d.summary.model || '—'], ['Trained', d.summary.trained_at || '—']],
+                    headers: ['Fruit', 'Forecast Revenue', 'Actual Revenue', 'Error %', 'Accuracy %'],
+                    rows: d.fruits.map((r) => [r.fruit, r.forecast, r.actual, r.error_percent ?? '', r.accuracy ?? '']),
+                };
+                case 'inventory': return {
+                    title: 'Inventory Turnover Report', file: 'inventory_report', label,
+                    summary: [['Products', d.summary.total_products], ['Stock on hand', num(d.summary.total_stock_quantity)], ['Inventory value', peso(d.summary.total_inventory_value)], ['Low / out of stock', d.summary.low_stock_items], ['Average turnover', d.summary.average_turnover === null ? '—' : d.summary.average_turnover + 'x']],
+                    headers: ['Fruit', 'Unit', 'Opening Stock', 'Received', 'Sold', 'Closing', 'Turnover (x)'],
+                    rows: d.items.map((r) => [r.product_name, r.unit, r.opening_stock, r.received, r.sold, r.closing_stock, r.turnover ?? '']),
+                };
+                case 'spoilage': return {
+                    title: 'Spoilage Loss Report', file: 'spoilage_report', label,
+                    summary: [['Total Spoilage', num(d.summary.total_spoilage_qty) + ' ' + d.summary.unit], ['Spoilage Rate', pct(d.summary.spoilage_rate)], ['Financial Loss', peso(d.summary.financial_loss)], ['Prevented Loss', peso(d.summary.prevented_loss)]],
+                    headers: ['Fruit', 'Spoilage Qty', 'Unit', 'Loss Value', 'Spoilage %', 'Main Cause'],
+                    rows: d.fruits.map((r) => [r.fruit, r.quantity, r.unit, r.loss_value, r.spoilage_percent, r.cause]),
+                };
+                case 'profit': return {
+                    title: 'Profit & Loss Report', file: 'profit_loss_report', label,
+                    summary: [['Gross Revenue', peso(d.summary.total_revenue)], ['Total COGS', peso(d.summary.cost_of_goods_sold)], ['Gross Profit', peso(d.summary.gross_profit)], ['Net Margin', pct(d.summary.gross_margin_percentage)], ['Cost coverage', d.summary.cost_coverage === null ? '—' : d.summary.cost_coverage + '% of sales']],
+                    headers: ['Fruit', 'Revenue', 'Cost', 'Profit', 'Margin %'],
+                    rows: d.product_profits.map((r) => [r.product_name, r.revenue, r.cost, r.profit, r.margin_percentage]),
+                };
             }
+            return null;
         },
-        
-        async loadProfitReport() {
-            this.loading = true;
-            try {
-                const endDate = new Date().toISOString().split('T')[0];
-                const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                
-                const response = await fetch(`/api/reports/profit-loss?start_date=${startDate}&end_date=${endDate}`);
-                if (!response.ok) throw new Error('Failed to fetch profit data');
-                
-                this.profitData = await response.json();
-                console.log('? Profit/Loss Report loaded:', this.profitData);
-            } catch (error) {
-                console.error('? Error loading profit report:', error);
-                this.profitData = { error: true, message: error.message };
-            } finally {
-                this.loading = false;
-            }
+
+        download(content, mime, filename) {
+            const url = URL.createObjectURL(new Blob([content], { type: mime }));
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         },
-        
+
+        stamp() {
+            return this.period.replace('_', '-') + '_' + new Date().toISOString().split('T')[0];
+        },
+
         downloadCSV() {
-            let csvContent = "data:text/csv;charset=utf-8,";
-            let filename = "report.csv";
-            
-            switch(this.tab) {
-                case 'sales':
-                    if (!this.salesData || !this.salesData.top_products) {
-                        alert('No sales data available to export');
-                        return;
-                    }
-                    csvContent += "Sales Report\n\n";
-                    csvContent += "Product,Quantity Sold,Revenue\n";
-                    this.salesData.top_products.forEach(p => {
-                        csvContent += `${p.product_name},${p.quantity_sold},${p.total_sales}\n`;
-                    });
-                    filename = "sales_report.csv";
-                    break;
-                    
-                case 'inventory':
-                    if (!this.inventoryData || !this.inventoryData.items) {
-                        alert('Loading inventory data...');
-                        this.loadInventoryReport();
-                        return;
-                    }
-                    csvContent += "Inventory Report\n\n";
-                    csvContent += "Product,Category,Stock,Unit,Value\n";
-                    this.inventoryData.items.forEach(i => {
-                        csvContent += `${i.product_name},${i.category},${i.total_stock},${i.unit},${i.total_value}\n`;
-                    });
-                    filename = "inventory_report.csv";
-                    break;
-                    
-                case 'spoilage':
-                    if (!this.expiryData || !this.expiryData.expiring_batches) {
-                        alert('Loading spoilage data...');
-                        this.loadExpiryReport();
-                        return;
-                    }
-                    csvContent += "Spoilage/Expiry Report\n\n";
-                    csvContent += "Product,Batch,Quantity,Expiry Date,Days Remaining\n";
-                    this.expiryData.expiring_batches.forEach(e => {
-                        csvContent += `${e.product_name},${e.batch_code},${e.quantity},${e.expiry_date},${e.days_remaining}\n`;
-                    });
-                    filename = "spoilage_report.csv";
-                    break;
-                    
-                case 'profit':
-                    if (!this.profitData || !this.profitData.summary) {
-                        alert('Loading profit data...');
-                        this.loadProfitReport();
-                        return;
-                    }
-                    csvContent += "Profit & Loss Report\n\n";
-                    csvContent += "Metric,Amount\n";
-                    csvContent += `Total Revenue,${this.profitData.summary.total_revenue || 0}\n`;
-                    csvContent += `Cost of Goods Sold,${this.profitData.summary.cost_of_goods_sold || 0}\n`;
-                    csvContent += `Gross Profit,${this.profitData.summary.gross_profit || 0}\n`;
-                    csvContent += `Profit Margin,${this.profitData.summary.gross_margin_percentage || 0}%\n`;
-                    filename = "profit_loss_report.csv";
-                    break;
-                    
-                default:
-                    alert('Select a report tab first');
-                    return;
-            }
-            
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const m = this.exportModel();
+            if (!m) { alert('Nothing to export yet. Wait for the report to finish loading.'); return; }
+            const cell = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+            const lines = [[m.title], [m.label], [], ...m.summary, [], m.headers, ...m.rows].map((r) => r.map(cell).join(','));
+            this.download('﻿' + lines.join('\r\n'), 'text/csv;charset=utf-8;', `${m.file}_${this.stamp()}.csv`);
         },
-        
+
+        exportExcel() {
+            const m = this.exportModel();
+            if (!m) { alert('Nothing to export yet. Wait for the report to finish loading.'); return; }
+            let html = '<html><head><meta charset="utf-8"></head><body>';
+            html += `<h1>FreshTrack ${esc(m.title)}</h1><p>${esc(m.label)} · Generated: ${esc(new Date().toLocaleString())}</p><br>`;
+            html += '<table border="1"><tr><th colspan="2" style="background:#7C3AED;color:white;">Summary</th></tr>';
+            m.summary.forEach(([l, v]) => { html += `<tr><td><b>${esc(l)}</b></td><td>${esc(v)}</td></tr>`; });
+            html += '</table><br><br><table border="1"><thead style="background:#7C3AED;color:white;"><tr>';
+            m.headers.forEach((h) => { html += `<th>${esc(h)}</th>`; });
+            html += '</tr></thead><tbody>';
+            m.rows.forEach((r) => { html += '<tr>' + r.map((c) => `<td>${esc(c)}</td>`).join('') + '</tr>'; });
+            html += '</tbody></table></body></html>';
+            this.download(html, 'application/vnd.ms-excel;charset=utf-8;', `${m.file}_${this.stamp()}.xls`);
+        },
+
         exportPDF() {
             if (this.tab === 'sales') {
-                // Open PDF in new window for printing
-                const endDate = new Date().toISOString().split('T')[0];
-                const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                
-                const pdfUrl = `/api/reports/sales/pdf?start_date=${startDate}&end_date=${endDate}`;
-                const printWindow = window.open(pdfUrl, '_blank');
-                
-                if (printWindow) {
-                    setTimeout(() => {
-                        printWindow.print();
-                    }, 500);
-                } else {
-                    alert('Please allow popups to generate PDF report');
-                }
+                // Server-rendered sales report, opened for printing / saving as PDF
+                const w = window.open(`/api/reports/sales/pdf?period=${encodeURIComponent(this.period)}`, '_blank');
+                if (w) setTimeout(() => w.print(), 500);
+                else alert('Please allow popups to generate PDF report');
             } else {
-                // For other reports, use print function
                 this.printReport();
             }
         },
-        
+
         printReport() {
-            // Add print date to body for ::after pseudo-element
-            const now = new Date();
-            const printDate = now.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+            const printDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             document.body.setAttribute('data-print-date', printDate);
-            
-            // Add print class to body for additional control
             document.body.classList.add('printing');
-            
-            // Give browser time to apply print styles
             setTimeout(() => {
                 window.print();
-                
-                // Remove class after print dialog closes
                 setTimeout(() => {
                     document.body.classList.remove('printing');
                     document.body.removeAttribute('data-print-date');
                 }, 1000);
             }, 250);
         },
-        
-        exportExcel() {
-            // Export the current visible table data
-            const tables = document.querySelectorAll('table.tbl');
-            let activeTable = null;
-            
-            // Find the visible table in the active tab
-            tables.forEach(table => {
-                const parent = table.closest('[x-show]');
-                if (parent && parent.style.display !== 'none') {
-                    activeTable = table;
-                }
-            });
-            
-            if (!activeTable) {
-                alert('No data table found in current tab');
-                return;
-            }
-            
-            // Build Excel content from the visible table
-            let excelContent = '<html><head><meta charset="utf-8"></head><body>';
-            excelContent += '<h1>FreshTrack Report - ' + this.tab.charAt(0).toUpperCase() + this.tab.slice(1) + '</h1>';
-            excelContent += '<p>Generated: ' + new Date().toLocaleString() + '</p><br>';
-            
-            // Add summary stats if available
-            const statsBoxes = document.querySelectorAll('[x-show="tab===\'' + this.tab + '\'"] .grid > div');
-            if (statsBoxes.length > 0) {
-                excelContent += '<table border="1"><tr><th colspan="2" style="background:#7C3AED;color:white;">Summary Statistics</th></tr>';
-                statsBoxes.forEach(box => {
-                    const value = box.querySelector('p:first-child')?.textContent.trim() || '';
-                    const label = box.querySelector('p:nth-child(2)')?.textContent.trim() || '';
-                    if (value && label) {
-                        excelContent += `<tr><td><b>${label}</b></td><td>${value}</td></tr>`;
-                    }
-                });
-                excelContent += '</table><br><br>';
-            }
-            
-            // Add the main data table
-            excelContent += '<table border="1">';
-            
-            // Copy thead
-            const thead = activeTable.querySelector('thead');
-            if (thead) {
-                excelContent += '<thead style="background:#7C3AED;color:white;">';
-                thead.querySelectorAll('tr').forEach(row => {
-                    excelContent += '<tr>';
-                    row.querySelectorAll('th').forEach(cell => {
-                        excelContent += `<th>${cell.textContent.trim()}</th>`;
-                    });
-                    excelContent += '</tr>';
-                });
-                excelContent += '</thead>';
-            }
-            
-            // Copy tbody
-            const tbody = activeTable.querySelector('tbody');
-            if (tbody) {
-                excelContent += '<tbody>';
-                tbody.querySelectorAll('tr').forEach(row => {
-                    excelContent += '<tr>';
-                    row.querySelectorAll('td').forEach(cell => {
-                        // Get text content, stripping HTML
-                        let text = cell.textContent.trim();
-                        // Remove extra whitespace
-                        text = text.replace(/\s+/g, ' ');
-                        excelContent += `<td>${text}</td>`;
-                    });
-                    excelContent += '</tr>';
-                });
-                excelContent += '</tbody>';
-            }
-            
-            excelContent += '</table></body></html>';
-            
-            // Create and download the file
-            const blob = new Blob([excelContent], { 
-                type: 'application/vnd.ms-excel;charset=utf-8;' 
-            });
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `freshtrack_${this.tab}_report_${new Date().toISOString().split('T')[0]}.xls`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-        }
     };
-    
-    return controller;
 }
-
-// Initialize charts with static fallback data
-document.addEventListener('DOMContentLoaded', function() {
-    const gc='rgba(124,58,237,.06)';
-    
-    // Sales Chart
-    new Chart(document.getElementById('salesReportChart'),{type:'line',data:{labels:Array.from({length:23},(_,i)=>'Jun '+(i+1)),datasets:[{label:'Daily Revenue',data:[12400,14200,13800,16400,15100,17800,19200,14600,16900,18300,15200,20100,17400,18900,16200,21500,19800,22400,18600,20200,17900,23100,18450],borderColor:'#7C3AED',backgroundColor:'rgba(124,58,237,.07)',borderWidth:2.5,fill:true,tension:.4,pointRadius:0}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#9CA3AF'}},y:{grid:{color:gc},border:{display:false},ticks:{font:{size:10},color:'#9CA3AF',callback:v=>'?'+(v/1000).toFixed(0)+'k'}}}}});
-    
-    // Forecast Chart
-    new Chart(document.getElementById('forecastAccReport'),{type:'line',data:{labels:['Week 1','Week 2','Week 3','Week 4','This Week'],datasets:[{label:'Mango',data:[97,98,99,98,99.8],borderColor:'#7C3AED',tension:.4,fill:false,borderWidth:2,pointRadius:4},{label:'Durian',data:[92,94,95,96,96],borderColor:'#10B981',tension:.4,fill:false,borderWidth:2,pointRadius:4},{label:'Pineapple',data:[88,90,91,93,92.9],borderColor:'#3B82F6',tension:.4,fill:false,borderWidth:2,pointRadius:4}]},options:{responsive:true,plugins:{legend:{position:'top',labels:{font:{size:11}}}},scales:{x:{grid:{display:false}},y:{min:85,max:100,grid:{color:gc},border:{display:false},ticks:{callback:v=>v+'%',font:{size:10},color:'#9CA3AF'}}}}});
-    
-    // Inventory Turnover Chart
-    new Chart(document.getElementById('invTurnChart'),{type:'bar',data:{labels:['Mango','Durian','Pomelo','Mangosteen','Lanzones','Pineapple','Banana'],datasets:[{label:'Turnover Rate',data:[6.3,7.4,2.1,5.8,4.2,11.6,13.3],backgroundColor:['#7C3AED','#10B981','#EF4444','#8B5CF6','#EC4899','#3B82F6','#14B8A6'],borderRadius:10}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:gc},border:{display:false},ticks:{font:{size:10},color:'#9CA3AF',callback:v=>v+'x'}}}}});
-    
-    // Profit Trend Chart
-    new Chart(document.getElementById('profitTrendChart'),{type:'bar',data:{labels:['Jan','Feb','Mar','Apr','May','Jun'],datasets:[{label:'Revenue',data:[280000,295000,310000,298000,325000,342800],backgroundColor:'rgba(124,58,237,.65)',borderRadius:8},{label:'COGS',data:[168000,177000,186000,178950,195000,198400],backgroundColor:'rgba(249,115,22,.65)',borderRadius:8},{label:'Profit',data:[112000,118000,124000,119050,130000,144400],backgroundColor:'rgba(16,185,129,.65)',borderRadius:8}]},options:{responsive:true,plugins:{legend:{position:'top',labels:{font:{size:11}}}},scales:{x:{grid:{display:false}},y:{grid:{color:gc},border:{display:false},ticks:{font:{size:10},color:'#9CA3AF',callback:v=>'?'+(v/1000).toFixed(0)+'k'}}}}});
-});
 </script>
 @endpush
 </x-app-layout>

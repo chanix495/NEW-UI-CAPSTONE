@@ -1,4 +1,11 @@
-﻿<header class="h-[68px] bg-white border-b border-[rgba(124,58,237,.07)] flex items-center justify-between px-6 flex-shrink-0 z-30 shadow-[0_1px_0_rgba(124,58,237,.06)]">
+﻿@php
+    $navUser = auth()->user();
+    $navInitials = collect(preg_split('/\s+/', trim($navUser->name ?? '')))->filter()->take(2)
+        ->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('') ?: 'U';
+    $navRole = ucfirst($navUser->role ?? 'user');
+    $navAvatar = $navUser->avatarUrl();
+@endphp
+<header class="h-[68px] bg-white border-b border-[rgba(124,58,237,.07)] flex items-center justify-between px-6 flex-shrink-0 z-50 shadow-[0_1px_0_rgba(124,58,237,.06)]">
 
     {{-- Left: hamburger + search --}}
     <div class="flex items-center gap-4">
@@ -34,7 +41,7 @@
             <svg class="w-3.5 h-3.5 text-violet-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
-            <span x-data x-text="new Date().toLocaleDateString('en-PH',{month:'long',day:'numeric',year:'numeric'})"></span>
+            <span>{{ $prefs->formatDate(now()) }}</span>
         </div>
 
         {{-- Dark mode --}}
@@ -67,7 +74,7 @@
                 <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                 </svg>
-                <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white pulse-dot"></span>
+                <span id="navNotifDot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white pulse-dot"></span>
             </button>
 
             <div x-show="notif" @click.outside="notif = false"
@@ -82,38 +89,13 @@
                 <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                     <div class="flex items-center gap-2">
                         <h3 class="font-bold text-gray-900 text-sm" style="font-family:Poppins,sans-serif">Notifications</h3>
-                        <span class="badge badge-violet text-[10px]">5 new</span>
+                        <span id="navNotifCount" class="badge badge-violet text-[10px]">0 new</span>
                     </div>
-                    <button class="text-[11px] text-violet-600 font-semibold hover:underline">Mark all read</button>
+                    <button id="navMarkAll" type="button" class="text-[11px] text-violet-600 font-semibold hover:underline">Mark all read</button>
                 </div>
 
-                <div class="max-h-80 overflow-y-auto divide-y divide-gray-50">
-                    @php
-                    $notifs = [
-                        ['bg-red-100 text-red-600',   'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',   'Critical',         'Pomelo stock critically low — only 8 kg remaining.',     '2 min ago',  'badge-red'],
-                        ['bg-amber-100 text-amber-600','M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',   'Spoilage Alert',   'Durian batch DUR-112 has 78% spoilage risk.',             '15 min ago', 'badge-orange'],
-                        ['bg-violet-100 text-violet-600','M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 'Sales Forecast Ready', 'New 7-day demand forecast is available.',                '1 hr ago',   'badge-violet'],
-                        ['bg-green-100 text-green-600','M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',                                                                         'Restock Complete',  'Mango batch MNG-003 (200kg) received.',                  '2 hrs ago',  'badge-green'],
-                        ['bg-blue-100 text-blue-600',  'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'Sales Milestone', "Today's sales reached ₱18,000 target.",                 '3 hrs ago',  'badge-blue'],
-                    ];
-                    @endphp
-                    @foreach($notifs as [$iconClass, $iconPath, $title, $body, $time, $badge])
-                    <div class="flex items-start gap-3 px-5 py-3.5 hover:bg-[#FAFAFE] transition-colors cursor-pointer">
-                        <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 {{ $iconClass }}">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $iconPath }}"/>
-                            </svg>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2 mb-0.5">
-                                <p class="text-[12.5px] font-semibold text-gray-900">{{ $title }}</p>
-                                <span class="badge {{ $badge }} text-[9px] px-1.5 py-0.5">new</span>
-                            </div>
-                            <p class="text-[12px] text-gray-500 leading-relaxed">{{ $body }}</p>
-                            <p class="text-[11px] text-gray-400 mt-1 font-medium">{{ $time }}</p>
-                        </div>
-                    </div>
-                    @endforeach
+                <div id="navNotifList" class="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                    <div id="navNotifEmpty" class="px-5 py-6 text-center text-[12px] text-gray-400">Loading notifications…</div>
                 </div>
 
                 <div class="px-5 py-3 border-t border-gray-100 bg-gray-50/50 text-center">
@@ -130,10 +112,10 @@
         <div class="relative">
             <button @click="profile = !profile; notif = false; msgOpen = false"
                     class="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-2xl hover:bg-[#F5F3FF] transition-all active:scale-95 group">
-                <div class="w-8 h-8 g-violet rounded-full flex items-center justify-center text-white text-xs font-black shadow-md shadow-violet-200">JD</div>
+                <div class="w-8 h-8 g-violet rounded-full flex items-center justify-center text-white text-xs font-black shadow-md shadow-violet-200 overflow-hidden">@if($navAvatar)<img src="{{ $navAvatar }}" alt="" class="w-full h-full object-cover">@else{{ $navInitials }}@endif</div>
                 <div class="hidden lg:block text-left">
-                    <p class="text-[12.5px] font-semibold text-gray-900 leading-tight">Criss Banawa</p>
-                    <p class="text-[11px] text-violet-500 leading-tight">Owner</p>
+                    <p class="text-[12.5px] font-semibold text-gray-900 leading-tight">{{ $navUser->name }}</p>
+                    <p class="text-[11px] text-violet-500 leading-tight">{{ $navRole }}</p>
                 </div>
                 <svg :class="profile ? 'rotate-180' : ''"
                      class="w-4 h-4 text-gray-400 transition-transform hidden lg:block"
@@ -154,15 +136,15 @@
                 {{-- Profile header --}}
                 <div class="p-4 bg-gradient-to-br from-[#F5F3FF] to-[#EDE9FE] border-b border-violet-100">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 g-violet rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-lg shadow-violet-200">JD</div>
+                        <div class="w-12 h-12 g-violet rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-lg shadow-violet-200 overflow-hidden">@if($navAvatar)<img src="{{ $navAvatar }}" alt="" class="w-full h-full object-cover">@else{{ $navInitials }}@endif</div>
                         <div>
-                            <p class="font-bold text-gray-900 text-sm" style="font-family:Poppins,sans-serif">Criss Banawa</p>
-                            <p class="text-[11.5px] text-gray-500">juan@FreshTrack.ph</p>
+                            <p class="font-bold text-gray-900 text-sm" style="font-family:Poppins,sans-serif">{{ $navUser->name }}</p>
+                            <p class="text-[11.5px] text-gray-500">{{ $navUser->email }}</p>
                             <div class="flex items-center gap-1.5 mt-1">
                                 <svg class="w-3 h-3 text-violet-600" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 1a1 1 0 01.894.553l2.236 4.472 4.944.719a1 1 0 01.555 1.706l-3.576 3.486.844 4.92a1 1 0 01-1.45 1.054L10 15.347l-4.447 2.563a1 1 0 01-1.45-1.054l.844-4.92L1.371 8.45a1 1 0 01.555-1.706l4.944-.719L8.106 1.553A1 1 0 0110 1z" clip-rule="evenodd"/>
                                 </svg>
-                                <span class="badge badge-violet text-[10px] px-2 py-0.5">Owner</span>
+                                <span class="badge badge-violet text-[10px] px-2 py-0.5">{{ $navRole }}</span>
                             </div>
                         </div>
                     </div>
@@ -178,6 +160,7 @@
                     ];
                     @endphp
                     @foreach($profileMenu as [$r, $path, $label, $danger])
+                    @continue($r === 'users' && ($navUser->role ?? null) !== 'owner')
                     <a href="{{ route($r) }}"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-colors {{ $danger ? 'text-red-500 hover:bg-red-50 hover:text-red-600' : 'text-gray-600 hover:bg-[#F5F3FF] hover:text-violet-700' }}">
                         <svg class="w-4 h-4 flex-shrink-0 {{ $danger ? 'text-red-400' : 'text-gray-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -187,7 +170,7 @@
                     </a>
                     @endforeach
                     <div class="my-1.5 border-t border-gray-100"></div>
-                    <a href="{{ route('login') }}"
+                    <a href="#" onclick="event.preventDefault(); document.getElementById('navLogoutForm').submit();"
                        class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors">
                         <svg class="w-4 h-4 flex-shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
@@ -199,3 +182,80 @@
         </div>
     </div>
 </header>
+
+<form id="navLogoutForm" method="POST" action="{{ route('logout') }}" class="hidden">@csrf</form>
+
+<script>
+// Navbar notifications (live from /api/notifications)
+(function () {
+    const list = document.getElementById('navNotifList');
+    if (!list) return;
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+    const pushOn = @json((bool) $prefs->push_notifications);
+    const url = @json(route('notifications'));
+    const warn = 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z';
+    const chart = 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z';
+    const box = 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4';
+    const coin = 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
+    const style = {
+        Critical: ['bg-red-100 text-red-600', warn, 'badge-red'],
+        High:     ['bg-amber-100 text-amber-600', warn, 'badge-orange'],
+        Medium:   ['bg-violet-100 text-violet-600', chart, 'badge-violet'],
+        Low:      ['bg-green-100 text-green-600', box, 'badge-green'],
+        Info:     ['bg-blue-100 text-blue-600', coin, 'badge-blue'],
+    };
+    const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const ago = iso => {
+        const m = Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));
+        if (m < 1) return 'just now';
+        if (m < 60) return m + ' min ago';
+        if (m < 1440) return Math.round(m / 60) + ' hr' + (Math.round(m / 60) > 1 ? 's' : '') + ' ago';
+        return Math.round(m / 1440) + ' day' + (Math.round(m / 1440) > 1 ? 's' : '') + ' ago';
+    };
+    const post = path => fetch(path, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' } });
+
+    function render(items) {
+        const unread = items.filter(n => !n.is_read);
+        document.getElementById('navNotifCount').textContent = unread.length + ' new';
+        document.getElementById('navNotifDot').classList.toggle('hidden', unread.length === 0 || !pushOn);
+        const shown = [...unread, ...items.filter(n => n.is_read)].slice(0, 6);
+        if (!shown.length) {
+            list.innerHTML = '<div class="px-5 py-6 text-center text-[12px] text-gray-400">No notifications</div>';
+            return;
+        }
+        list.innerHTML = shown.map(n => {
+            const [icon, path, badge] = style[n.severity] || style.Info;
+            return `<div class="flex items-start gap-3 px-5 py-3.5 hover:bg-[#FAFAFE] transition-colors cursor-pointer" data-id="${n.id}" data-link="${esc(n.action_link || '')}">
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${icon}">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="${path}"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <p class="text-[12.5px] font-semibold text-gray-900">${esc(n.title)}</p>
+                        ${n.is_read ? '' : `<span class="badge ${badge} text-[9px] px-1.5 py-0.5">new</span>`}
+                    </div>
+                    <p class="text-[12px] text-gray-500 leading-relaxed">${esc(n.message || n.subtitle)}</p>
+                    <p class="text-[11px] text-gray-400 mt-1 font-medium">${ago(n.created_at)}</p>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function load() {
+        fetch('/api/notifications', { headers: { 'Accept': 'application/json' } })
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(render)
+            .catch(() => { list.innerHTML = '<div class="px-5 py-6 text-center text-[12px] text-gray-400">Could not load notifications</div>'; });
+    }
+
+    list.addEventListener('click', e => {
+        const row = e.target.closest('[data-id]');
+        if (!row) return;
+        post('/api/notifications/' + row.dataset.id + '/read').finally(() => { window.location = row.dataset.link || url; });
+    });
+    document.getElementById('navMarkAll').addEventListener('click', () => post('/api/notifications/read-all').then(load));
+
+    load();
+    setInterval(load, 60000);
+})();
+</script>

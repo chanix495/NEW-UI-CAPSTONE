@@ -27,7 +27,7 @@
             </div>
             <div class="flex-1">
                 <div class="flex items-center justify-between">
-                    <h1 class="text-2xl font-black text-white">Good {{ now()->hour < 12 ? 'morning' : (now()->hour < 18 ? 'afternoon' : 'evening') }}, Criss Banawa!</h1>
+                    <h1 class="text-2xl font-black text-white">Good {{ now($prefs->timezone)->hour < 12 ? 'morning' : (now($prefs->timezone)->hour < 18 ? 'afternoon' : 'evening') }}, {{ auth()->user()->name }}!</h1>
                     <div class="flex items-center gap-3 flex-shrink-0">
                         <a href="{{ route('reports') }}"
                            class="flex items-center gap-2 bg-white/15 border border-white/25 text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl hover:bg-white/25 transition-all">
@@ -48,7 +48,7 @@
             </div>
         </div>
         <p class="text-white/75 text-[14.5px] mb-4">
-            {{ now()->format('l, F j, Y') }} · Here's your executive summary for today.
+            {{ now($prefs->timezone)->format('l') }}, {{ $prefs->formatDate(now()) }} · Here's your executive summary for today.
         </p>
         <div class="flex flex-wrap gap-3">
             <span class="flex items-center gap-1.5 text-[12px] bg-white/15 text-white font-semibold px-3.5 py-1.5 rounded-full backdrop-blur-sm border border-white/20">
@@ -59,13 +59,13 @@
                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
-                FreshTrack Davao · Peak Season
+                FreshTrack {{ config('services.openweather.city') }} · {{ now()->format('F Y') }}
             </span>
             <span class="flex items-center gap-1.5 text-[12px] bg-white/15 text-white font-semibold px-3.5 py-1.5 rounded-full border border-white/20">
                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
                 </svg>
-                28°C · Partly Cloudy
+                <span id="heroWeather">Weather loading…</span>
             </span>
         </div>
     </div>
@@ -75,10 +75,10 @@
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
 @php
 $kpis1 = [
-    ["Today's Sales",   '₱18,450',  '+12.5%', true,  'g-violet', 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'vs yesterday',     '#7C3AED', 'salesSparkline',    [12400,14200,11800,15600,13400,16200,18450]],
-    ['Monthly Revenue', '₱342,800', '+8.3%',  true,  'g-violet',  'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',                                                                                                                                                  'vs last month',    '#8B5CF6', 'revenueSparkline',  [295000,310000,318000,325000,330000,338000,342800]],
-    ['Total Inventory', '1,240 kg', '-3.2%',  false, 'g-violet',  'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',                                                                                                               'vs last week',     '#A78BFA', 'inventorySparkline',[1380,1350,1320,1295,1270,1255,1240]],
-    ['Forecast Acc.',   '96.4%',    '+1.2%',  true,  'g-violet',   'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 'model confidence', '#6D28D9', 'forecastSparkline', [93.2,94.1,93.8,94.5,95.1,95.8,96.4]],
+    [$dash['kpis1'][0][0], $dash['kpis1'][0][1], $dash['kpis1'][0][2], $dash['kpis1'][0][3], 'g-violet', 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', $dash['kpis1'][0][4], '#7C3AED', 'salesSparkline', $dash['kpis1'][0][5]],
+    [$dash['kpis1'][1][0], $dash['kpis1'][1][1], $dash['kpis1'][1][2], $dash['kpis1'][1][3], 'g-violet', 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6', $dash['kpis1'][1][4], '#8B5CF6', 'revenueSparkline', $dash['kpis1'][1][5]],
+    [$dash['kpis1'][2][0], $dash['kpis1'][2][1], $dash['kpis1'][2][2], $dash['kpis1'][2][3], 'g-violet', 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', $dash['kpis1'][2][4], '#A78BFA', 'inventorySparkline', $dash['kpis1'][2][5]],
+    [$dash['kpis1'][3][0], $dash['kpis1'][3][1], $dash['kpis1'][3][2], $dash['kpis1'][3][3], 'g-violet', 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', $dash['kpis1'][3][4], '#6D28D9', 'forecastSparkline', $dash['kpis1'][3][5]],
 ];
 @endphp
 @foreach($kpis1 as [$label,$val,$chg,$up,$grad,$iconPath,$sub,$color,$canvasId,$sparkData])
@@ -113,10 +113,10 @@ $kpis1 = [
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
 @php
 $kpis2 = [
-    ['Spoilage Rate',   '8.4%',    '-2.1%',  true,  'g-violet',   'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',                   'below avg threshold', '#9333EA', 'spoilageSparkline',  [12.1,11.3,10.8,10.2,9.5,8.9,8.4]],
-    ['Low Stock Items', '3 Items',  '+1',     false, 'g-violet',  'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6',                                                                                                                            'needs attention',     '#A855F7', 'lowstockSparkline', [1,1,2,1,3,2,3]],
-    ['Expected Profit', '₱52,300', '+15.7%', true,  'g-violet',   'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'projected this month','#7C3AED','profitSparkline',   [38000,41000,43500,46200,48700,50500,52300]],
-    ['AI Score',        '94/100',  '+3pts',  true,  'g-violet', 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z', 'recommendations', '#6D28D9','aiSparkline',       [88,89,90,91,91,93,94]],
+    [$dash['kpis2'][0][0], $dash['kpis2'][0][1], $dash['kpis2'][0][2], $dash['kpis2'][0][3], 'g-violet', 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', $dash['kpis2'][0][4], '#9333EA', 'spoilageSparkline', $dash['kpis2'][0][5]],
+    [$dash['kpis2'][1][0], $dash['kpis2'][1][1], $dash['kpis2'][1][2], $dash['kpis2'][1][3], 'g-violet', 'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6', $dash['kpis2'][1][4], '#A855F7', 'lowstockSparkline', $dash['kpis2'][1][5]],
+    [$dash['kpis2'][2][0], $dash['kpis2'][2][1], $dash['kpis2'][2][2], $dash['kpis2'][2][3], 'g-violet', 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', $dash['kpis2'][2][4], '#7C3AED', 'profitSparkline', $dash['kpis2'][2][5]],
+    [$dash['kpis2'][3][0], $dash['kpis2'][3][1], $dash['kpis2'][3][2], $dash['kpis2'][3][3], 'g-violet', 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z', $dash['kpis2'][3][4], '#6D28D9', 'aiSparkline', $dash['kpis2'][3][5]],
 ];
 @endphp
 @foreach($kpis2 as [$label,$val,$chg,$up,$grad,$iconPath,$sub,$color,$canvasId,$sparkData])
@@ -157,7 +157,7 @@ $kpis2 = [
             </div>
             <div>
                 <h2 class="text-[18px] font-black text-gray-900">Forecast Demand Summary (SARIMAX)</h2>
-                <p class="text-[12px] text-gray-400 mt-0.5">7-day sales prediction · Model accuracy: 96.4%</p>
+                <p class="text-[12px] text-gray-400 mt-0.5">7-day sales prediction · Model accuracy: {{ $dash['forecast']['accuracy'] !== null ? $dash['forecast']['accuracy'] . '%' : 'N/A' }}</p>
             </div>
         </div>
         <a href="{{ route('forecast') }}" class="flex items-center gap-2 text-[13px] font-semibold text-violet-600 hover:text-violet-700">
@@ -182,9 +182,10 @@ $kpis2 = [
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>
                     </svg>
                 </div>
-                <p class="text-[20px] font-black text-gray-900">Mango</p>
-                <p class="text-[13px] text-gray-600 mt-1">Forecasted: <span class="font-bold text-violet-700">145 kg/day</span></p>
-                <p class="text-[11px] text-gray-400 mt-1">↑ 38% increase expected this weekend</p>
+                @php $hiF = $dash['forecast']['highest']; @endphp
+                <p class="text-[20px] font-black text-gray-900">{{ $hiF['name'] ?? '—' }}</p>
+                <p class="text-[13px] text-gray-600 mt-1">Forecasted: <span class="font-bold text-violet-700">{{ $hiF ? $hiF['per_day'] . ' ' . $hiF['unit'] . '/day' : 'No forecast yet' }}</span></p>
+                <p class="text-[11px] text-gray-400 mt-1">{{ !$hiF ? 'Run the model once sales data exists' : ($hiF['change'] === null ? 'No recent sales to compare' : ($hiF['change'] >= 0 ? '↑ ' : '↓ ') . abs($hiF['change']) . '% vs last 7 days') }}</p>
             </div>
             
             <div class="bg-gradient-to-br from-gray-50 to-slate-50 rounded-2xl p-4 border border-gray-200">
@@ -194,27 +195,26 @@ $kpis2 = [
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                     </svg>
                 </div>
-                <p class="text-[20px] font-black text-gray-900">Lanzones</p>
-                <p class="text-[13px] text-gray-600 mt-1">Forecasted: <span class="font-bold text-gray-700">28 kg/day</span></p>
-                <p class="text-[11px] text-gray-400 mt-1">↓ 12% decrease from last week</p>
+                @php $loF = $dash['forecast']['lowest']; @endphp
+                <p class="text-[20px] font-black text-gray-900">{{ $loF['name'] ?? '—' }}</p>
+                <p class="text-[13px] text-gray-600 mt-1">Forecasted: <span class="font-bold text-gray-700">{{ $loF ? $loF['per_day'] . ' ' . $loF['unit'] . '/day' : 'No forecast yet' }}</span></p>
+                <p class="text-[11px] text-gray-400 mt-1">{{ !$loF ? 'Needs at least two fruits forecasted' : ($loF['change'] === null ? 'No recent sales to compare' : ($loF['change'] >= 0 ? '↑ ' : '↓ ') . abs($loF['change']) . '% vs last 7 days') }}</p>
             </div>
 
             <div class="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-4 border border-violet-200">
                 <span class="text-[11px] font-bold text-violet-600 uppercase tracking-wide mb-2 block">Recommended Action</span>
                 <p class="text-[13px] text-gray-700 font-semibold mb-2">Replenish Inventory</p>
                 <div class="space-y-1.5">
+                    @forelse($dash['forecast']['restock'] as $r)
                     <div class="flex items-center justify-between text-[12px]">
-                        <span class="text-gray-500">Mango</span>
-                        <span class="font-bold text-gray-900">+50 kg</span>
+                        <span class="text-gray-500">{{ $r['name'] }}</span>
+                        <span class="font-bold text-gray-900">+{{ $r['short'] }} {{ $r['unit'] }}</span>
                     </div>
+                    @empty
                     <div class="flex items-center justify-between text-[12px]">
-                        <span class="text-gray-500">Pomelo</span>
-                        <span class="font-bold text-gray-900">+50 kg</span>
+                        <span class="text-gray-500">{{ $dash['forecast']['has_data'] ? 'Stock covers forecast demand' : 'No forecast yet' }}</span>
                     </div>
-                    <div class="flex items-center justify-between text-[12px]">
-                        <span class="text-gray-500">Durian</span>
-                        <span class="font-bold text-gray-900">+30 kg</span>
-                    </div>
+                    @endforelse
                 </div>
             </div>
         </div>
@@ -258,13 +258,7 @@ $kpis2 = [
             </thead>
             <tbody>
                 @php
-                $spoilageData = [
-                    ['MNG-002', 'Mango', '155 kg', 78, '24h', 'Critical', 'badge-red', 'Sell First'],
-                    ['DUR-112', 'Durian', '92 kg', 65, '36h', 'High Risk', 'badge-orange', 'Monitor'],
-                    ['MNG-001', 'Mango', '120 kg', 45, '2 days', 'Moderate', 'badge-amber', 'Discount 15%'],
-                    ['POM-034', 'Pomelo', '8 kg', 32, '3 days', 'Low Risk', 'badge-green', 'Normal'],
-                    ['PIN-087', 'Pineapple', '75 kg', 28, '4 days', 'Low Risk', 'badge-green', 'Normal'],
-                ];
+                $spoilageData = $dash['spoilage'];
                 @endphp
                 @foreach($spoilageData as [$batch, $fruit, $qty, $risk, $shelf, $status, $badge, $action])
                 <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
@@ -299,6 +293,9 @@ $kpis2 = [
                     </td>
                 </tr>
                 @endforeach
+                @if(empty($spoilageData))
+                <tr><td colspan="7" class="py-6 px-3 text-center text-[12.5px] text-gray-400">No spoilage predictions yet. They appear once batches exist and the model has run.</td></tr>
+                @endif
             </tbody>
         </table>
     </div>
@@ -329,27 +326,27 @@ $kpis2 = [
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {{-- Current Weather --}}
         <div class="bg-violet-600 rounded-2xl p-6 text-white shadow-lg">
-            <p class="text-[11px] font-bold text-white/80 uppercase tracking-wide mb-3">📍 Davao City · Live</p>
+            <p class="text-[11px] font-bold text-white/80 uppercase tracking-wide mb-3">📍 <span id="wxCity">{{ config('services.openweather.city') }}</span> · <span id="wxStatus">Loading…</span></p>
             <div class="mb-4">
-                <p class="text-[52px] font-black leading-none mb-1">28°C</p>
-                <p class="text-[15px] font-semibold text-white/90">Partly Cloudy ☁️</p>
+                <p class="text-[52px] font-black leading-none mb-1" id="wxTemp">--</p>
+                <p class="text-[15px] font-semibold text-white/90" id="wxCond">--</p>
             </div>
             <div class="grid grid-cols-2 gap-3 mt-4">
                 <div class="bg-white/10 rounded-xl p-3 border border-white/20">
                     <p class="text-[10px] text-white/70 uppercase font-bold mb-1">💧 Humidity</p>
-                    <p class="text-[18px] font-black">78%</p>
+                    <p class="text-[18px] font-black" id="wxHumidity">--</p>
                 </div>
                 <div class="bg-white/10 rounded-xl p-3 border border-white/20">
-                    <p class="text-[10px] text-white/70 uppercase font-bold mb-1">💨 Wind</p>
-                    <p class="text-[18px] font-black">12 km/h</p>
+                    <p class="text-[10px] text-white/70 uppercase font-bold mb-1">🌧️ Rain (1h)</p>
+                    <p class="text-[18px] font-black" id="wxRain">--</p>
                 </div>
                 <div class="bg-white/10 rounded-xl p-3 border border-white/20">
                     <p class="text-[10px] text-white/70 uppercase font-bold mb-1">🌡️ Feels</p>
-                    <p class="text-[18px] font-black">31°C</p>
+                    <p class="text-[18px] font-black" id="wxFeels">--</p>
                 </div>
                 <div class="bg-white/10 rounded-xl p-3 border border-white/20">
-                    <p class="text-[10px] text-white/70 uppercase font-bold mb-1">☀️ UV</p>
-                    <p class="text-[18px] font-black">7 High</p>
+                    <p class="text-[10px] text-white/70 uppercase font-bold mb-1">🕒 Updated</p>
+                    <p class="text-[18px] font-black" id="wxTime">--</p>
                 </div>
             </div>
         </div>
@@ -370,8 +367,8 @@ $kpis2 = [
                         </svg>
                     </div>
                     <div>
-                        <p class="text-[12.5px] font-bold text-gray-900">High Temperature</p>
-                        <p class="text-[11.5px] text-gray-600 leading-snug">Accelerates spoilage by 25-40%</p>
+                        <p class="text-[12.5px] font-bold text-gray-900" id="effTempTitle">Temperature</p>
+                        <p class="text-[11.5px] text-gray-600 leading-snug" id="effTempText">Waiting for weather data</p>
                     </div>
                 </div>
                 <div class="flex items-start gap-2.5">
@@ -381,8 +378,8 @@ $kpis2 = [
                         </svg>
                     </div>
                     <div>
-                        <p class="text-[12.5px] font-bold text-gray-900">High Humidity</p>
-                        <p class="text-[11.5px] text-gray-600 leading-snug">Promotes mold on Durian & Mangosteen</p>
+                        <p class="text-[12.5px] font-bold text-gray-900" id="effHumTitle">Humidity</p>
+                        <p class="text-[11.5px] text-gray-600 leading-snug" id="effHumText">Waiting for weather data</p>
                     </div>
                 </div>
                 <div class="flex items-start gap-2.5">
@@ -392,8 +389,8 @@ $kpis2 = [
                         </svg>
                     </div>
                     <div>
-                        <p class="text-[12.5px] font-bold text-gray-900">Current Risk Level</p>
-                        <p class="text-[11.5px] text-gray-600 leading-snug">Enhanced monitoring required</p>
+                        <p class="text-[12.5px] font-bold text-gray-900" id="effRiskTitle">Current Risk Level</p>
+                        <p class="text-[11.5px] text-gray-600 leading-snug" id="effRiskText">Waiting for weather data</p>
                     </div>
                 </div>
             </div>
@@ -406,13 +403,13 @@ $kpis2 = [
                     <svg class="w-4.5 h-4.5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
-                    <span class="badge bg-purple-100 text-purple-700 text-[9.5px] font-bold">URGENT</span>
+                    <span class="badge bg-purple-100 text-purple-700 text-[9.5px] font-bold" id="recAlertBadge">INFO</span>
                 </div>
-                <h4 class="text-[13px] font-black text-gray-900 mb-1.5">High Humidity Warning</h4>
-                <p class="text-[11.5px] text-gray-600 leading-snug mb-2.5">78% humidity increases risk. Monitor DUR-112 & MNG-002 batches.</p>
-                <button class="btn btn-sm bg-purple-600 text-white hover:bg-purple-700 w-full text-[11px] font-bold py-1.5">
+                <h4 class="text-[13px] font-black text-gray-900 mb-1.5" id="recAlertTitle">Weather Alert</h4>
+                <p class="text-[11.5px] text-gray-600 leading-snug mb-2.5" id="recAlertText">Waiting for weather data</p>
+                <a href="{{ route('spoilage') }}" class="btn btn-sm bg-purple-600 text-white hover:bg-purple-700 w-full text-[11px] font-bold py-1.5 text-center block">
                     View Batches
-                </button>
+                </a>
             </div>
 
             <div class="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-4 border-2 border-violet-200">
@@ -423,7 +420,7 @@ $kpis2 = [
                     <span class="badge bg-violet-100 text-violet-700 text-[9.5px] font-bold">ACTION</span>
                 </div>
                 <h4 class="text-[13px] font-black text-gray-900 mb-1.5">Temperature Control</h4>
-                <p class="text-[11.5px] text-gray-600 leading-snug mb-2.5">Keep storage at 18-22°C with proper ventilation.</p>
+                <p class="text-[11.5px] text-gray-600 leading-snug mb-2.5" id="recTempText">Keep storage cool and well ventilated.</p>
                 <button class="btn btn-sm bg-violet-600 text-white hover:bg-violet-700 w-full text-[11px] font-bold py-1.5">
                     Guidelines
                 </button>
@@ -437,7 +434,7 @@ $kpis2 = [
                     <span class="badge bg-violet-100 text-violet-700 text-[9.5px] font-bold">48H</span>
                 </div>
                 <h4 class="text-[13px] font-black text-gray-900 mb-1.5">Forecast Outlook</h4>
-                <p class="text-[11.5px] text-gray-600 leading-snug">Humidity 75-80%. Temp stable. Continue monitoring.</p>
+                <p class="text-[11.5px] text-gray-600 leading-snug" id="recOutlookText">Waiting for forecast data</p>
             </div>
         </div>
     </div>
@@ -450,11 +447,11 @@ $kpis2 = [
         <div class="flex items-center justify-between mb-5">
             <div>
                 <h3 class="font-bold text-gray-900 text-[15px]">Sales Revenue Trend</h3>
-                <p class="text-[12px] text-gray-400 mt-0.5">Daily revenue — last 14 days</p>
+                <p class="text-[12px] text-gray-400 mt-0.5" id="trendSub">Daily revenue — last 14 days</p>
             </div>
             <div class="flex gap-1 bg-gray-100 rounded-xl p-1">
                 @foreach(['7D','14D','30D'] as $i => $p)
-                <button class="text-[12px] font-semibold px-3 py-1.5 rounded-lg transition-all {{ $i===1 ? 'bg-white text-violet-700 shadow-sm' : 'text-gray-400 hover:text-gray-700' }}">{{ $p }}</button>
+                <button data-range="{{ (int) $p }}" class="trend-range text-[12px] font-semibold px-3 py-1.5 rounded-lg transition-all {{ $i===1 ? 'bg-white text-violet-700 shadow-sm' : 'text-gray-400 hover:text-gray-700' }}">{{ $p }}</button>
                 @endforeach
             </div>
         </div>
@@ -472,7 +469,7 @@ $kpis2 = [
                 <canvas id="donutChart"></canvas>
             </div>
             <div class="flex-1 space-y-3">
-                @foreach([['Mango','38%','#7C3AED'],['Durian','22%','#8B5CF6'],['Pineapple','15%','#A78BFA'],['Others','25%','#C4B5FD']] as [$n,$p,$c])
+                @forelse($dash['distribution'] as [$n,$p,$c])
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
                         <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:{{ $c }}"></span>
@@ -480,7 +477,9 @@ $kpis2 = [
                     </div>
                     <span class="text-[13.5px] font-black text-gray-900">{{ $p }}</span>
                 </div>
-                @endforeach
+                @empty
+                <p class="text-[12.5px] text-gray-400">No stock recorded yet</p>
+                @endforelse
             </div>
         </div>
     </div>
@@ -528,14 +527,7 @@ $kpis2 = [
             </tr></thead>
             <tbody>
             @php
-            $transactions = [
-                ['bg-violet-100','M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4','text-violet-600','Mango',       '15 kg','₱1,875','08:32 AM','Completed','badge-green'],
-                ['bg-green-100', 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'text-green-600', 'Pineapple',    '8 pcs','₱640',  '09:15 AM','Completed','badge-green'],
-                ['bg-yellow-100','M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4','text-yellow-600','Banana',       '20 kg','₱900',  '10:02 AM','Completed','badge-green'],
-                ['bg-orange-100','M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4','text-orange-600','Pomelo',       '5 pcs','₱375',  '11:20 AM','Pending',  'badge-amber'],
-                ['bg-pink-100',  'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',  'text-pink-600',  'Mangosteen',  '12 kg','₱2,160','01:45 PM','Completed','badge-green'],
-                ['bg-blue-100',  'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',  'text-blue-600',  'Lanzones',    '6 kg', '₱540',  '02:30 PM','Completed','badge-green'],
-            ];
+            $transactions = $dash['transactions'];
             @endphp
             @foreach($transactions as [$iconBg,$iconPath,$iconColor,$name,$qty,$total,$time,$status,$badge])
             <tr>
@@ -555,6 +547,9 @@ $kpis2 = [
                 <td><span class="badge {{ $badge }} text-[11px]">{{ $status }}</span></td>
             </tr>
             @endforeach
+            @if(empty($transactions))
+            <tr><td colspan="5" class="text-center text-gray-400 text-[12.5px] py-6">No sales recorded today</td></tr>
+            @endif
             </tbody>
         </table>
     </div>
@@ -570,7 +565,7 @@ $kpis2 = [
             <h3 class="font-bold text-gray-900 text-[14px]">Top Sellers Today</h3>
         </div>
         <div class="space-y-3">
-            @foreach([['Mango','₱4,200','#7C3AED',85],['Mangosteen','₱3,150','#10B981',64],['Banana','₱2,400','#3B82F6',49],['Pineapple','₱1,800','#F59E0B',37]] as $i => [$n,$v,$c,$p])
+            @forelse($dash['top_sellers'] as $i => [$n,$v,$c,$p])
             <div class="flex items-center gap-3">
                 <span class="text-[12px] font-black text-gray-300 w-4">{{ $i+1 }}</span>
                 <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style="background:{{ $c }}20">
@@ -588,7 +583,9 @@ $kpis2 = [
                     </div>
                 </div>
             </div>
-            @endforeach
+            @empty
+            <p class="text-[12.5px] text-gray-400">No sales yet today</p>
+            @endforelse
         </div>
     </div>
 </div>
@@ -619,11 +616,7 @@ $kpis2 = [
             <th class="text-left">Status</th><th class="text-left">Action</th>
         </tr></thead>
         <tbody>
-        @foreach([
-            ['bg-orange-100','text-orange-600','Pomelo',    '8 kg', '50 kg',16,'Critical','badge-red'],
-            ['bg-pink-100',  'text-pink-600',  'Mangosteen','14 kg','40 kg',35,'Low Stock','badge-amber'],
-            ['bg-blue-100',  'text-blue-600',  'Lanzones',  '22 kg','50 kg',44,'Low Stock','badge-amber'],
-        ] as [$iconBg,$iconColor,$name,$stock,$req,$pct,$status,$badge])
+        @foreach($dash['low_stock'] as [$iconBg,$iconColor,$name,$stock,$req,$pct,$status,$badge])
         <tr>
             <td>
                 <div class="flex items-center gap-2.5">
@@ -646,9 +639,12 @@ $kpis2 = [
                 </div>
             </td>
             <td><span class="badge {{ $badge }} text-[11px]">{{ $status }}</span></td>
-            <td><button class="btn btn-violet btn-sm text-[12px]">Restock</button></td>
+            <td><button class="btn btn-violet btn-sm text-[12px]" onclick="window.location='{{ route('inventory') }}'">Restock</button></td>
         </tr>
         @endforeach
+        @if(empty($dash['low_stock']))
+        <tr><td colspan="6" class="text-center text-gray-400 text-[12.5px] py-6">All items are above their reorder level</td></tr>
+        @endif
         </tbody>
     </table>
 </div>
@@ -682,6 +678,63 @@ $kpis2 = [
 
 @push('scripts')
 <script>
+// Live weather (OpenWeather via /api/weather)
+(function loadWeather() {
+    const $ = id => document.getElementById(id);
+    const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+    const offline = msg => {
+        set('heroWeather', 'Weather unavailable');
+        set('wxStatus', 'Offline');
+        set('wxTemp', '--'); set('wxCond', msg);
+        ['wxHumidity','wxRain','wxFeels','wxTime'].forEach(id => set(id, '--'));
+        set('effTempText', msg); set('effHumText', msg); set('effRiskText', msg);
+        set('recAlertText', msg); set('recOutlookText', msg);
+    };
+
+    fetch('/api/weather', { headers: { 'Accept': 'application/json' } })
+        .then(r => r.json())
+        .then(res => {
+            const w = res.current;
+            if (!w) return offline(res.error ? 'Weather service not configured yet' : 'No weather data yet');
+
+            const hot = w.temperature >= 32, humid = w.humidity >= 80, rainy = w.rainfall > 0;
+            set('wxCity', w.city || res.city);
+            set('wxStatus', 'Live');
+            set('wxTemp', Math.round(w.temperature) + '°C');
+            set('wxCond', w.description ? w.description.replace(/\b\w/g, c => c.toUpperCase()) : (w.condition || '--'));
+            set('wxHumidity', Math.round(w.humidity) + '%');
+            set('wxRain', w.rainfall + ' mm');
+            set('wxFeels', Math.round(w.feels_like) + '°C');
+            set('wxTime', (w.observed_at || '').slice(11, 16) || '--');
+            set('heroWeather', Math.round(w.temperature) + '°C · ' + (w.condition || ''));
+
+            set('effTempTitle', hot ? 'High Temperature' : 'Temperature Normal');
+            set('effTempText', hot ? 'Heat accelerates ripening and spoilage' : 'No heat stress on stored produce');
+            set('effHumTitle', humid ? 'High Humidity' : 'Humidity Normal');
+            set('effHumText', humid ? 'Promotes mold and decay on stored fruit' : 'Humidity is within a safe range');
+            const level = (hot && humid) ? 'High' : (hot || humid || rainy) ? 'Elevated' : 'Low';
+            set('effRiskTitle', 'Current Risk Level: ' + level);
+            set('effRiskText', level === 'Low' ? 'Routine monitoring is enough' : 'Enhanced monitoring required');
+
+            set('recAlertBadge', level === 'Low' ? 'OK' : (level === 'High' ? 'URGENT' : 'WATCH'));
+            set('recAlertTitle', humid ? 'High Humidity Warning' : (hot ? 'High Temperature Warning' : 'Conditions Normal'));
+            set('recAlertText', humid || hot
+                ? `${Math.round(w.humidity)}% humidity at ${Math.round(w.temperature)}°C raises spoilage risk. Check the Spoilage page for at-risk batches.`
+                : 'No weather-driven spoilage alerts right now.');
+            set('recTempText', hot ? 'Hot day: keep storage at 18-22°C with proper ventilation.' : 'Keep storage at 18-22°C with proper ventilation.');
+
+            const days = (res.forecast || []).slice(0, 2);
+            if (days.length) {
+                const avg = k => Math.round(days.reduce((a, d) => a + Number(d[k]), 0) / days.length);
+                const rain = days.reduce((a, d) => a + Number(d.rainfall || 0), 0);
+                set('recOutlookText', `Next ${days.length} day(s): ~${avg('temperature')}°C, ${avg('humidity')}% humidity` + (rain > 0 ? `, ${rain.toFixed(1)} mm rain expected.` : ', no rain expected.'));
+            } else {
+                set('recOutlookText', 'No forecast stored yet. Run weather:sync.');
+            }
+        })
+        .catch(() => offline('Could not load weather'));
+})();
+
 // Chart defaults
 const gc = 'rgba(124,58,237,.06)';
 Chart.defaults.font.size = 11;
@@ -758,13 +811,15 @@ document.querySelectorAll('.sparkline-canvas').forEach(canvas => {
 });
 
 // Sales Trend Chart
-new Chart(document.getElementById('salesChart'), {
+const trendAll = @json($dash['trend']);
+const fmtK = v => v >= 1000 ? '₱' + (v/1000) + 'k' : '₱' + v;
+const salesChart = new Chart(document.getElementById('salesChart'), {
     type: 'line',
     data: {
-        labels: ['Jul 3','Jul 4','Jul 5','Jul 6','Jul 7','Jul 8','Jul 9','Jul 10','Jul 11','Jul 12','Jul 13','Jul 14','Jul 15','Jul 16'],
+        labels: trendAll.labels.slice(-14),
         datasets: [{
             label: 'Revenue',
-            data: [12400,14200,11800,15600,13400,16200,14800,17200,15800,16900,17800,18200,17500,18450],
+            data: trendAll.values.slice(-14),
             borderColor: '#7C3AED',
             backgroundColor: 'rgba(124,58,237,.1)',
             borderWidth: 3,
@@ -789,7 +844,7 @@ new Chart(document.getElementById('salesChart'), {
         },
         scales: {
             x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-            y: { grid: { color: gc }, border: { display: false }, ticks: { callback: v => '₱' + (v/1000) + 'k' } }
+            y: { grid: { color: gc }, border: { display: false }, ticks: { callback: fmtK } }
         }
     }
 });
@@ -798,9 +853,9 @@ new Chart(document.getElementById('salesChart'), {
 new Chart(document.getElementById('donutChart'), {
     type: 'doughnut',
     data: {
-        labels: ['Mango','Durian','Pineapple','Others'],
+        labels: @json(array_column($dash['distribution'], 0)),
         datasets: [{
-            data: [38,22,15,25],
+            data: @json(array_column($dash['distribution'], 3)),
             backgroundColor: ['#7C3AED','#8B5CF6','#A78BFA','#C4B5FD'],
             borderWidth: 0
         }]
@@ -818,10 +873,10 @@ new Chart(document.getElementById('donutChart'), {
 new Chart(document.getElementById('forecastBarChart'), {
     type: 'bar',
     data: {
-        labels: ['Week 1','Week 2','Week 3','Week 4','Week 5'],
+        labels: @json($dash['week']['labels']),
         datasets: [
-            { label: 'Forecast', data: [72000,75000,78000,82000,85000], backgroundColor: 'rgba(124,58,237,.3)', borderRadius: 8 },
-            { label: 'Actual', data: [70500,76200,77800,83400,84200], backgroundColor: '#7C3AED', borderRadius: 8 }
+            { label: 'Forecast', data: @json($dash['week']['forecast']), backgroundColor: 'rgba(124,58,237,.3)', borderRadius: 8 },
+            { label: 'Actual', data: @json($dash['week']['actual']), backgroundColor: '#7C3AED', borderRadius: 8 }
         ]
     },
     options: {
@@ -830,7 +885,7 @@ new Chart(document.getElementById('forecastBarChart'), {
         plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } },
         scales: {
             x: { grid: { display: false } },
-            y: { grid: { color: gc }, border: { display: false }, ticks: { callback: v => '₱' + (v/1000) + 'k' } }
+            y: { grid: { color: gc }, border: { display: false }, ticks: { callback: fmtK } }
         }
     }
 });
@@ -839,10 +894,10 @@ new Chart(document.getElementById('forecastBarChart'), {
 new Chart(document.getElementById('fruitBarChart'), {
     type: 'bar',
     data: {
-        labels: ['Mango','Durian','Pineapple','Banana','Pomelo','Mangosteen','Lanzones'],
+        labels: @json($dash['fruit_revenue']['labels']),
         datasets: [{
             label: 'Revenue',
-            data: [120000,85000,52000,48000,35000,42000,28000],
+            data: @json($dash['fruit_revenue']['values']),
             backgroundColor: ['#7C3AED','#8B5CF6','#A78BFA','#C4B5FD','#DDD6FE','#9333EA','#A855F7'],
             borderRadius: 10
         }]
@@ -853,7 +908,7 @@ new Chart(document.getElementById('fruitBarChart'), {
         plugins: { legend: { display: false } },
         scales: {
             x: { grid: { display: false } },
-            y: { grid: { color: gc }, border: { display: false }, ticks: { callback: v => '₱' + (v/1000) + 'k' } }
+            y: { grid: { color: gc }, border: { display: false }, ticks: { callback: fmtK } }
         }
     }
 });
@@ -862,10 +917,10 @@ new Chart(document.getElementById('fruitBarChart'), {
 new Chart(document.getElementById('forecastDemandChart'), {
     type: 'bar',
     data: {
-        labels: ['Mango','Durian','Pineapple','Banana','Pomelo','Mangosteen','Lanzones'],
+        labels: @json($dash['forecast']['labels']),
         datasets: [{
             label: 'Forecasted Demand (kg/day)',
-            data: [145,95,68,82,52,45,28],
+            data: @json($dash['forecast']['values']),
             backgroundColor: 'rgba(59,130,246,.8)',
             borderRadius: 10
         }]
@@ -894,6 +949,23 @@ new Chart(document.getElementById('forecastDemandChart'), {
         }
     }
 });
+
+// Sales trend range buttons (7D / 14D / 30D)
+document.querySelectorAll('.trend-range').forEach(btn => btn.addEventListener('click', () => {
+    const n = parseInt(btn.dataset.range, 10);
+    salesChart.data.labels = trendAll.labels.slice(-n);
+    salesChart.data.datasets[0].data = trendAll.values.slice(-n);
+    salesChart.update();
+    document.getElementById('trendSub').textContent = 'Daily revenue — last ' + n + ' days';
+    document.querySelectorAll('.trend-range').forEach(b => {
+        const on = b === btn;
+        b.classList.toggle('bg-white', on);
+        b.classList.toggle('text-violet-700', on);
+        b.classList.toggle('shadow-sm', on);
+        b.classList.toggle('text-gray-400', !on);
+        b.classList.toggle('hover:text-gray-700', !on);
+    });
+}));
 </script>
 @endpush
 </x-app-layout>

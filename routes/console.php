@@ -16,3 +16,12 @@ Schedule::command('ml:run sales --skip-weather --refit')->weeklyOn(0, '05:00')->
 
 // Update both models each morning before the store opens
 Schedule::command('ml:run all --skip-weather')->dailyAt('05:30')->timezone(config('services.openweather.timezone'));
+
+// Database backups, each switchable from Settings > Data Backup
+$backupTz = config('services.openweather.timezone');
+Schedule::command('backup:run')->dailyAt('00:00')->timezone($backupTz)
+    ->when(fn () => app(\App\Services\BackupService::class)->scheduleEnabled('daily'));
+Schedule::command('backup:run')->weeklyOn(0, '00:00')->timezone($backupTz)
+    ->when(fn () => app(\App\Services\BackupService::class)->scheduleEnabled('weekly'));
+Schedule::command('backup:run')->monthlyOn(1, '00:00')->timezone($backupTz)
+    ->when(fn () => app(\App\Services\BackupService::class)->scheduleEnabled('monthly'));

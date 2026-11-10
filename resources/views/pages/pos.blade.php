@@ -232,10 +232,10 @@ document.addEventListener('DOMContentLoaded',()=>{
 
         {{-- Cashier --}}
         <div class="hidden md:flex items-center gap-2 flex-shrink-0">
-            <div class="w-8 h-8 g-violet rounded-full flex items-center justify-center text-white text-xs font-black shadow-md shadow-violet-200">JD</div>
+            <div class="w-8 h-8 g-violet rounded-full flex items-center justify-center text-white text-xs font-black shadow-md shadow-violet-200 overflow-hidden">@if(auth()->user()->avatarUrl())<img src="{{ auth()->user()->avatarUrl() }}" alt="" class="w-full h-full object-cover">@else{{ collect(preg_split('/\s+/', trim(auth()->user()->name)))->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('') ?: 'U' }}@endif</div>
             <div class="hidden xl:block">
-                <p class="text-[12px] font-semibold text-gray-900 leading-tight">Criss Banawa</p>
-                <p class="text-[10.5px] text-violet-500">Cashier</p>
+                <p class="text-[12px] font-semibold text-gray-900 leading-tight">{{ auth()->user()->name }}</p>
+                <p class="text-[10.5px] text-violet-500">{{ ucfirst(auth()->user()->role ?? 'cashier') }}</p>
             </div>
         </div>
 
@@ -745,30 +745,35 @@ document.addEventListener('DOMContentLoaded',()=>{
     </div>
 
     {{-- ══ LOW STOCK FLOATING ALERTS ══ --}}
-    <div class="ls-panel" x-show="showLowStockAlerts">
+    <div class="ls-panel" x-show="showLowStockAlerts" x-cloak>
+        @foreach($posAlerts as $alert)
+        @if($alert['type'] === 'low_stock')
         <div class="alert-float">
             <div class="flex items-start gap-2.5">
                 <span class="text-xl">⚠️</span>
                 <div>
                     <p class="text-[11.5px] font-bold text-amber-800">Low Stock Alert</p>
-                    <p class="text-[12px] text-gray-700 font-semibold">Pomelo</p>
-                    <p class="text-[11px] text-gray-500">Remaining: <strong>8 kg</strong></p>
+                    <p class="text-[12px] text-gray-700 font-semibold">{{ $alert['name'] }}</p>
+                    <p class="text-[11px] text-gray-500">Remaining: <strong>{{ $alert['detail'] }}</strong></p>
                 </div>
                 <button @click="showLowStockAlerts=false" class="text-gray-300 hover:text-gray-500 ml-auto">
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
         </div>
+        @else
         <div class="alert-float">
             <div class="flex items-start gap-2.5">
                 <span class="text-xl">🔴</span>
                 <div>
-                    <p class="text-[11.5px] font-bold text-red-700">High Spoilage Risk</p>
-                    <p class="text-[12px] text-gray-700 font-semibold">Pineapple</p>
-                    <p class="text-[11px] text-gray-500">Priority: <strong class="text-red-600">Sell Today</strong></p>
+                    <p class="text-[11.5px] font-bold text-red-700">{{ $alert['level'] === 'Critical' ? 'Critical' : 'High' }} Spoilage Risk</p>
+                    <p class="text-[12px] text-gray-700 font-semibold">{{ $alert['name'] }} <span class="text-gray-400 font-normal">{{ $alert['batch'] }}</span></p>
+                    <p class="text-[11px] text-gray-500">Priority: <strong class="text-red-600">{{ $alert['detail'] }}</strong></p>
                 </div>
             </div>
         </div>
+        @endif
+        @endforeach
     </div>
 
     {{-- ══ AI SMART RECOMMENDATIONS PANEL ══ --}}
@@ -861,7 +866,7 @@ function posApp() {
         selectedFruit: null,
         successModal: false,
         discountModal: false,
-        showLowStockAlerts: true,
+        showLowStockAlerts: {{ count($posAlerts) ? 'true' : 'false' }},
         showAiRecs: false,
         showRecentTxn: false,
         completedOrder: {},
@@ -1013,7 +1018,7 @@ function posApp() {
 
         updateClock() {
             const now = new Date();
-            this.currentTime = now.toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+            this.currentTime = now.toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit', second:'2-digit', timeZone: @json($prefs->timezone) });
             this.currentDate = now.toLocaleDateString('en-PH', { month:'long', day:'numeric', year:'numeric' });
         },
 

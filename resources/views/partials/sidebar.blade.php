@@ -109,36 +109,5 @@ $userRole = $roleNames[$user->role ?? 'owner'] ?? 'User';
             @endif
         @endforeach
 
-        <div class="pt-3 mt-2 border-t border-[rgba(124,58,237,.08)]">
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" data-tip="Logout" class="nav-link text-red-500 hover:bg-red-50 hover:text-red-600 w-full">
-                    <svg class="w-[18px] h-[18px] flex-shrink-0 text-red-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                    </svg>
-                    <span x-show="sidebarOpen" x-transition class="truncate text-[13.5px]">Logout</span>
-                </button>
-            </form>
-        </div>
     </nav>
-
-    {{-- User card --}}
-    <div x-show="sidebarOpen" x-transition class="border-t border-[rgba(124,58,237,.06)] p-3 flex-shrink-0">
-        <div class="flex items-center gap-3 p-3 bg-[#F5F3FF] rounded-2xl cursor-pointer hover:bg-violet-100/60 transition-colors">
-            <div class="w-9 h-9 g-violet rounded-full flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-md shadow-violet-200">
-                {{ strtoupper(substr($user->name ?? 'User', 0, 2)) }}
-            </div>
-            <div class="min-w-0 flex-1">
-                <p class="text-[12.5px] font-semibold text-gray-900 truncate">{{ $user->name ?? 'User' }}</p>
-                <p class="text-[11px] text-violet-500 truncate font-medium">{{ $userRole }}</p>
-            </div>
-            <div class="w-2 h-2 bg-green-400 rounded-full flex-shrink-0 pulse-dot ring-2 ring-white"></div>
-        </div>
-    </div>
-    <div x-show="!sidebarOpen" class="border-t border-[rgba(124,58,237,.06)] p-3 flex justify-center flex-shrink-0">
-        <div class="w-9 h-9 g-violet rounded-full flex items-center justify-center text-white text-xs font-black shadow-md shadow-violet-200">
-            {{ strtoupper(substr($user->name ?? 'User', 0, 2)) }}
-        </div>
-    </div>
 </aside>

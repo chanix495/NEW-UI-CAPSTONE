@@ -89,7 +89,49 @@ class SalesController extends Controller
         ->where('stock_quantity', '>', 0)
         ->get();
 
-        return view('pages.pos', ['products' => $products]);
+        return view('pages.pos', ['products' => $products, 'posAlerts' => $this->posAlerts()]);
+    }
+
+    /**
+     * Alerts shown as floating cards on the POS screen: items at or below their
+     * reorder level, and batches the spoilage model rates Critical / High Risk today.
+     */
+    private function posAlerts(): array
+    {
+        // In-app push alerts can be switched off in Settings > Notifications
+        if (!\App\Models\OwnerSetting::forUser(Auth::id())->push_notifications) {
+            return [];
+        }
+
+        $low = InventoryItem::lowStock()->active()
+            ->orderBy('stock_quantity')->limit(3)->get()
+            ->map(fn ($i) => [
+                'type' => 'low_stock',
+                'name' => $i->name,
+                'detail' => rtrim(rtrim(number_format((float) $i->stock_quantity, 2, '.', ''), '0'), '.') . ' ' . $i->unit,
+            ]);
+
+        $spoilage = collect();
+        $date = DB::table('spoilage_predictions')->max('prediction_date');
+        if ($date) {
+            $spoilage = DB::table('spoilage_predictions as p')
+                ->join('inventory_batches as b', 'b.id', '=', 'p.inventory_batch_id')
+                ->join('inventory_items as i', 'i.id', '=', 'p.inventory_item_id')
+                ->where('p.prediction_date', $date)->where('p.horizon_day', 0)
+                ->whereIn('p.risk_level', ['Critical', 'High Risk'])
+                ->where('b.status', 'available')->where('b.quantity', '>', 0)
+                ->orderByDesc('p.risk_score')->limit(2)
+                ->get(['i.name', 'b.batch_code', 'p.risk_level', 'p.recommendation'])
+                ->map(fn ($r) => [
+                    'type' => 'spoilage',
+                    'name' => $r->name,
+                    'detail' => $r->recommendation ?: 'Sell soon',
+                    'level' => $r->risk_level,
+                    'batch' => $r->batch_code,
+                ]);
+        }
+
+        return $low->concat($spoilage)->values()->all();
     }
 
     /**

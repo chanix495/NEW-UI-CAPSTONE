@@ -37,3 +37,7 @@ __pycache__/
 ~$*
 /ml/vendor_forecast/model_output/sales/test_predictions.csv
 /ml/vendor_forecast/model_output/sales/forecast_chart.png
+/ml/vendor_forecast/model_output/sales/forecast_chart.png
+
+# Python virtual environment
+.venv/
